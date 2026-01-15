@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outfit Recommender</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .input-section {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus {
+            border-color: #666;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #555;
+        }
+        .results {
+            display: none;
+        }
+        .results.show {
+            display: block;
+        }
+        .results-header {
+            text-align: center;
+            color: #333;
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+        .outfits-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        @media (max-width: 600px) {
+            .outfits-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .outfit-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .outfit-card-header {
+            background: #333;
+            color: white;
+            padding: 12px 16px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .outfit-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+        }
+        .outfit-item:last-child {
+            border-bottom: none;
+        }
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            margin-right: 12px;
+            border: 1px solid #ddd;
+        }
+        .item-details {
+            flex: 1;
+        }
+        .item-type {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .item-name {
+            font-size: 16px;
+            color: #333;
+            margin-top: 2px;
+        }
+        .input-badge {
+            background: #e8f5e9;
+            color: #2e7d32;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        .error {
+            color: #d32f2f;
+            text-align: center;
+            padding: 16px;
+            display: none;
+        }
+        .error.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Outfit Recommender</h1>
+        <p class="subtitle">Enter a clothing item to get a complete outfit</p>
+
+        <div class="input-section">
+            <input type="text" id="itemInput" placeholder="e.g., blue shirt, black pants, brown shoes">
+            <button onclick="recommend()">Get Outfit</button>
+        </div>
+
+        <p class="error" id="error">Please enter a color and item (e.g., "blue shirt")</p>
+
+        <div class="results" id="results">
+            <div class="results-header">Choose Your Outfit</div>
+            <div class="outfits-grid" id="outfitList"></div>
+        </div>
+    </div>
+
+    <script>
+        const colorData = {
+            // Color hex codes
+            hex: {
+                white: '#ffffff', black: '#1a1a1a', gray: '#808080', grey: '#808080',
+                navy: '#001f3f', blue: '#4a90d9', lightblue: '#add8e6',
+                red: '#dc3545', maroon: '#800000', burgundy: '#800020',
+                green: '#28a745', olive: '#808000', khaki: '#c3b091',
+                brown: '#8b4513', tan: '#d2b48c', beige: '#f5f5dc', cream: '#fffdd0',
+                yellow: '#ffd700', orange: '#ff8c00', pink: '#ffc0cb',
+                purple: '#6f42c1', lavender: '#e6e6fa', charcoal: '#36454f'
+            },
+            // Complementary outfit suggestions
+            complements: {
+                white: { shirts: ['navy', 'black', 'gray'], pants: ['navy', 'black', 'khaki', 'gray'], shoes: ['brown', 'black', 'white'] },
+                black: { shirts: ['white', 'gray', 'lightblue'], pants: ['black', 'gray', 'khaki'], shoes: ['black', 'brown', 'white'] },
+                gray: { shirts: ['white', 'navy', 'black'], pants: ['navy', 'black', 'charcoal'], shoes: ['black', 'brown'] },
+                grey: { shirts: ['white', 'navy', 'black'], pants: ['navy', 'black', 'charcoal'], shoes: ['black', 'brown'] },
+                navy: { shirts: ['white', 'lightblue', 'pink'], pants: ['khaki', 'gray', 'beige'], shoes: ['brown', 'white', 'tan'] },
+                blue: { shirts: ['white', 'navy', 'gray'], pants: ['khaki', 'navy', 'gray', 'beige'], shoes: ['brown', 'tan', 'white'] },
+                lightblue: { shirts: ['white', 'navy'], pants: ['navy', 'khaki', 'gray', 'white'], shoes: ['brown', 'tan', 'white'] },
+                red: { shirts: ['white', 'black', 'navy'], pants: ['navy', 'black', 'khaki'], shoes: ['black', 'brown'] },
+                maroon: { shirts: ['white', 'cream', 'beige'], pants: ['khaki', 'gray', 'navy'], shoes: ['brown', 'tan'] },
+                burgundy: { shirts: ['white', 'cream', 'beige'], pants: ['khaki', 'gray', 'navy'], shoes: ['brown', 'tan'] },
+                green: { shirts: ['white', 'beige', 'cream'], pants: ['khaki', 'navy', 'beige'], shoes: ['brown', 'tan'] },
+                olive: { shirts: ['white', 'cream', 'tan'], pants: ['khaki', 'beige', 'brown'], shoes: ['brown', 'tan'] },
+                khaki: { shirts: ['navy', 'white', 'blue', 'burgundy'], pants: ['navy', 'brown'], shoes: ['brown', 'tan', 'white'] },
+                brown: { shirts: ['white', 'cream', 'beige', 'lightblue'], pants: ['khaki', 'beige', 'navy'], shoes: ['brown', 'tan'] },
+                tan: { shirts: ['navy', 'white', 'brown'], pants: ['navy', 'brown', 'white'], shoes: ['brown', 'tan'] },
+                beige: { shirts: ['navy', 'brown', 'white', 'burgundy'], pants: ['navy', 'brown'], shoes: ['brown', 'tan'] },
+                cream: { shirts: ['navy', 'brown', 'olive'], pants: ['navy', 'brown', 'khaki'], shoes: ['brown', 'tan'] },
+                yellow: { shirts: ['white', 'navy'], pants: ['navy', 'white', 'khaki'], shoes: ['white', 'brown'] },
+                orange: { shirts: ['white', 'navy'], pants: ['navy', 'khaki', 'white'], shoes: ['brown', 'tan', 'white'] },
+                pink: { shirts: ['white', 'navy', 'gray'], pants: ['navy', 'gray', 'white', 'khaki'], shoes: ['brown', 'tan', 'white'] },
+                purple: { shirts: ['white', 'gray', 'black'], pants: ['gray', 'black', 'navy'], shoes: ['black', 'brown'] },
+                lavender: { shirts: ['white', 'navy', 'gray'], pants: ['gray', 'navy', 'white'], shoes: ['brown', 'tan', 'white'] },
+                charcoal: { shirts: ['white', 'lightblue', 'pink'], pants: ['charcoal', 'black', 'gray'], shoes: ['black', 'brown'] }
+            }
+        };
+
+        const itemTypes = ['shirt', 'pants', 'shoes', 'top', 'jeans', 'sneakers', 'boots', 'loafers', 'chinos', 'trousers', 'tee', 't-shirt', 'blouse', 'sweater', 'jacket'];
+
+        function parseInput(input) {
+            const lower = input.toLowerCase().trim();
+            let foundColor = null;
+            let foundItem = null;
+
+            for (const color of Object.keys(colorData.hex)) {
+                if (lower.includes(color)) {
+                    foundColor = color;
+                    break;
+                }
+            }
+
+            for (const item of itemTypes) {
+                if (lower.includes(item)) {
+                    foundItem = item;
+                    break;
+                }
+            }
+
+            // Normalize item types
+            if (['top', 'tee', 't-shirt', 'blouse', 'sweater'].includes(foundItem)) foundItem = 'shirt';
+            if (['jeans', 'chinos', 'trousers'].includes(foundItem)) foundItem = 'pants';
+            if (['sneakers', 'boots', 'loafers'].includes(foundItem)) foundItem = 'shoes';
+
+            return { color: foundColor, item: foundItem };
+        }
+
+        function getCategory(item) {
+            if (['shirt', 'top', 'tee', 't-shirt', 'blouse', 'sweater', 'jacket'].includes(item)) return 'shirt';
+            if (['pants', 'jeans', 'chinos', 'trousers'].includes(item)) return 'pants';
+            if (['shoes', 'sneakers', 'boots', 'loafers'].includes(item)) return 'shoes';
+            return null;
+        }
+
+        function pickRandom(arr, exclude = []) {
+            const filtered = arr.filter(item => !exclude.includes(item));
+            if (filtered.length === 0) return arr[Math.floor(Math.random() * arr.length)];
+            return filtered[Math.floor(Math.random() * filtered.length)];
+        }
+
+        function generateOutfit(color, category, complements, usedCombos) {
+            const outfit = {
+                shirt: { color: null, isInput: false },
+                pants: { color: null, isInput: false },
+                shoes: { color: null, isInput: false }
+            };
+
+            outfit[category] = { color: color, isInput: true };
+
+            // Try to create a unique combination
+            let attempts = 0;
+            do {
+                for (const cat of ['shirt', 'pants', 'shoes']) {
+                    if (!outfit[cat].isInput) {
+                        const options = complements[cat] || ['gray'];
+                        outfit[cat].color = pickRandom(options);
+                    }
+                }
+                const combo = `${outfit.shirt.color}-${outfit.pants.color}-${outfit.shoes.color}`;
+                if (!usedCombos.has(combo) || attempts > 10) {
+                    usedCombos.add(combo);
+                    break;
+                }
+                attempts++;
+            } while (true);
+
+            return outfit;
+        }
+
+        function recommend() {
+            const input = document.getElementById('itemInput').value;
+            const { color, item } = parseInput(input);
+            const errorEl = document.getElementById('error');
+            const resultsEl = document.getElementById('results');
+
+            if (!color || !item) {
+                errorEl.classList.add('show');
+                resultsEl.classList.remove('show');
+                return;
+            }
+
+            errorEl.classList.remove('show');
+            const category = getCategory(item);
+            const complements = colorData.complements[color] || colorData.complements['gray'];
+
+            // Generate 4 unique outfits
+            const usedCombos = new Set();
+            const outfits = [];
+            for (let i = 0; i < 4; i++) {
+                outfits.push(generateOutfit(color, category, complements, usedCombos));
+            }
+
+            // Render all 4 outfit cards
+            const html = outfits.map((outfit, idx) => {
+                const items = ['shirt', 'pants', 'shoes'].map(cat => {
+                    const c = outfit[cat].color;
+                    const hex = colorData.hex[c] || '#ccc';
+                    const badge = outfit[cat].isInput ? '<span class="input-badge">YOUR ITEM</span>' : '';
+                    return `
+                        <div class="outfit-item">
+                            <div class="color-swatch" style="background: ${hex}"></div>
+                            <div class="item-details">
+                                <div class="item-type">${cat}</div>
+                                <div class="item-name">${c.charAt(0).toUpperCase() + c.slice(1)} ${cat}${badge}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="outfit-card">
+                        <div class="outfit-card-header">Option ${idx + 1}</div>
+                        ${items}
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('outfitList').innerHTML = html;
+            resultsEl.classList.add('show');
+        }
+
+        // Allow Enter key
+        document.getElementById('itemInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') recommend();
+        });
+    </script>
+</body>
+</html>
