@@ -1,25 +1,19 @@
 """
-Vercel serverless function for receipt analysis using Tesseract OCR.
-Works locally without any external APIs.
+Receipt analysis using OCR.space free API.
+No installation required - just a free API key from ocr.space
 """
 
-import base64
-import io
 import os
 import re
+import requests
 from datetime import datetime
 
 from flask import Flask, request, jsonify
-from PIL import Image
-import pytesseract
 
 app = Flask(__name__)
 
-# Configure Tesseract path for Windows (adjust if needed)
-if os.name == 'nt':
-    tesseract_path = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-    if os.path.exists(tesseract_path):
-        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+# OCR.space API endpoint
+OCR_SPACE_URL = "https://api.ocr.space/parse/image"
 
 # Default vendor to category mapping
 VENDOR_CATEGORIES = {
@@ -62,7 +56,7 @@ KNOWN_VENDORS = [
     "Speedway", "Target", "Walmart", "Costco", "Amazon", "Best Buy",
     "Kroger", "Whole Foods", "Trader Joe's", "Safeway", "Aldi", "Publix",
     "Starbucks", "Dunkin", "Peet's", "CVS", "Walgreens", "Rite Aid",
-    "Home Depot", "Lowe's", "Walgreens", "7-Eleven", "Circle K"
+    "Home Depot", "Lowe's", "7-Eleven", "Circle K"
 ]
 
 
@@ -162,13 +156,11 @@ def extract_vendor(text: str) -> str:
         # Check category mapping
         for vendor_key in VENDOR_CATEGORIES.keys():
             if vendor_key in line_clean.lower():
-                # Return the line as vendor name (cleaned up)
-                return line_clean[:50]  # Limit length
+                return line_clean[:50]
 
     # Fallback: use first non-empty line that looks like a name
     for line in lines[:5]:
         line_clean = line.strip()
-        # Skip lines that are just numbers, dates, or too short
         if line_clean and len(line_clean) > 3:
             if not re.match(r'^[\d\s\-\/\.\$]+$', line_clean):
                 return line_clean[:50]
@@ -176,61 +168,82 @@ def extract_vendor(text: str) -> str:
     return "Unknown Vendor"
 
 
-def analyze_receipt_ocr(image_data: str, media_type: str) -> dict:
-    """Analyze receipt image using Tesseract OCR."""
-    # Decode base64 image
-    if "base64," in image_data:
-        image_data = image_data.split("base64,")[1]
-
-    image_bytes = base64.b64decode(image_data)
-    image = Image.open(io.BytesIO(image_bytes))
-
-    # Convert to RGB if necessary
-    if image.mode != 'RGB':
-        image = image.convert('RGB')
-
-    # Perform OCR
-    text = pytesseract.image_to_string(image)
-
-    # Extract data from OCR text
-    total = extract_total(text)
-    vendor = extract_vendor(text)
-    date = extract_date(text)
-    category = get_category(vendor)
-
-    return {
-        "total": total,
-        "vendor": vendor,
-        "date": date,
-        "category": category,
-        "raw_text": text[:500]  # Include some raw text for debugging
+def ocr_space_api(image_base64: str, api_key: str) -> str:
+    """Call OCR.space API to extract text from image."""
+    payload = {
+        'apikey': api_key,
+        'base64Image': image_base64,
+        'language': 'eng',
+        'isOverlayRequired': False,
+        'detectOrientation': True,
+        'scale': True,
+        'OCREngine': 2,  # Engine 2 is better for receipts
     }
+
+    response = requests.post(OCR_SPACE_URL, data=payload, timeout=30)
+    response.raise_for_status()
+
+    result = response.json()
+
+    if result.get('IsErroredOnProcessing'):
+        error_msg = result.get('ErrorMessage', ['Unknown error'])
+        raise Exception(f"OCR.space error: {error_msg}")
+
+    # Extract text from all parsed results
+    parsed_results = result.get('ParsedResults', [])
+    if not parsed_results:
+        raise Exception("No text found in image")
+
+    text = '\n'.join([r.get('ParsedText', '') for r in parsed_results])
+    return text
 
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze_receipt():
     """Analyze a receipt image and return extracted data."""
     try:
+        # Get API key from environment
+        api_key = os.environ.get("OCR_SPACE_API_KEY")
+        if not api_key:
+            return jsonify({
+                "error": "OCR_SPACE_API_KEY not configured. Get a free key at ocr.space"
+            }), 500
+
         # Get image data from request
         data = request.get_json()
         if not data or "image" not in data:
             return jsonify({"error": "No image data provided"}), 400
 
         image_data = data["image"]
-        media_type = data.get("media_type", "image/jpeg")
 
-        # Analyze with OCR
-        extracted = analyze_receipt_ocr(image_data, media_type)
+        # Ensure proper base64 format for OCR.space
+        if not image_data.startswith("data:"):
+            media_type = data.get("media_type", "image/jpeg")
+            image_data = f"data:{media_type};base64,{image_data}"
+
+        # Call OCR.space API
+        text = ocr_space_api(image_data, api_key)
+
+        # Extract data from OCR text
+        total = extract_total(text)
+        vendor = extract_vendor(text)
+        date = extract_date(text)
+        category = get_category(vendor)
 
         return jsonify({
             "success": True,
-            "data": extracted
+            "data": {
+                "total": total,
+                "vendor": vendor,
+                "date": date,
+                "category": category,
+            }
         })
 
-    except pytesseract.TesseractNotFoundError:
-        return jsonify({
-            "error": "Tesseract OCR not installed. Please install Tesseract-OCR."
-        }), 500
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "OCR service timeout. Please try again."}), 504
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"OCR service error: {str(e)}"}), 502
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -238,19 +251,15 @@ def analyze_receipt():
 @app.route("/api/health", methods=["GET"])
 def health_check():
     """Health check endpoint."""
-    try:
-        # Test if Tesseract is available
-        pytesseract.get_tesseract_version()
-        tesseract_ok = True
-    except:
-        tesseract_ok = False
-
+    api_key = os.environ.get("OCR_SPACE_API_KEY")
     return jsonify({
-        "status": "ok" if tesseract_ok else "degraded",
-        "tesseract_installed": tesseract_ok
+        "status": "ok" if api_key else "missing_api_key",
+        "ocr_configured": bool(api_key)
     })
 
 
 # For local development
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
     app.run(debug=True, port=5000)

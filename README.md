@@ -1,11 +1,11 @@
 # Receipt Spend Tracker
 
-A web application that scans receipt photos using OCR and tracks expenses. Works locally without any external APIs.
+A web application that scans receipt photos using OCR and tracks expenses. Works on Vercel with just a free API key.
 
 ## Features
 
 - Upload receipt images (JPG, PNG)
-- OCR-powered receipt scanning (Tesseract)
+- OCR-powered receipt scanning (OCR.space API)
 - Auto-extracts vendor, total amount, and date
 - Auto-categorization of vendors
 - Edit extracted data before saving
@@ -14,55 +14,40 @@ A web application that scans receipt photos using OCR and tracks expenses. Works
 
 ---
 
-## Setup
+## Quick Start
 
-### 1. Install Tesseract OCR
+### 1. Get a Free OCR.space API Key
 
-**Windows:**
-1. Download installer from: https://github.com/UB-Mannheim/tesseract/wiki
-2. Run the installer (default path: `C:\Program Files\Tesseract-OCR`)
-3. Add to PATH or the app will auto-detect it
+1. Go to [ocr.space/ocrapi](https://ocr.space/ocrapi)
+2. Click "Get Free API Key"
+3. Enter your email and get your key instantly
 
-**Mac:**
-```bash
-brew install tesseract
-```
+### 2. Deploy to Vercel
 
-**Linux:**
-```bash
-sudo apt install tesseract-ocr
-```
-
-### 2. Install Python Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Run the App
-
-```bash
-python api/analyze.py
-```
-
-Then open `index.html` in your browser, or serve it:
-
-```bash
-# In another terminal
-python -m http.server 8000
-# Open http://localhost:8000
-```
+1. Push this repo to GitHub
+2. Go to [vercel.com](https://vercel.com) and import the repo
+3. Add environment variable: `OCR_SPACE_API_KEY` = your key
+4. Deploy!
 
 ---
 
-## Deploy to Vercel
+## Local Development
 
-> **Note:** Vercel's serverless environment doesn't include Tesseract by default. For cloud deployment, you'd need to use a custom runtime or Docker. This app is designed primarily for local use.
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-For local/self-hosted deployment:
-1. Push to GitHub
-2. Deploy on a server with Tesseract installed
-3. Run with gunicorn or similar
+# Create .env file with your API key
+echo "OCR_SPACE_API_KEY=your_key_here" > .env
+
+# Run the API server
+python api/analyze.py
+
+# In another terminal, serve the frontend
+python -m http.server 8000
+
+# Open http://localhost:8000
+```
 
 ---
 
@@ -71,9 +56,9 @@ For local/self-hosted deployment:
 ```
 .
 ├── api/
-│   └── analyze.py      # Flask API with Tesseract OCR
+│   └── analyze.py      # Flask API with OCR.space integration
 ├── index.html          # Web frontend
-├── vercel.json         # Vercel config (limited support)
+├── vercel.json         # Vercel configuration
 ├── requirements.txt    # Python dependencies
 └── README.md
 ```
@@ -81,7 +66,7 @@ For local/self-hosted deployment:
 ## How It Works
 
 1. Upload a receipt image
-2. Tesseract OCR extracts text from the image
+2. OCR.space extracts text from the image
 3. Parser identifies:
    - **Vendor**: Matches known vendors or uses first text line
    - **Total**: Looks for "Total" labels or largest dollar amount
@@ -107,5 +92,6 @@ Unknown vendors are categorized as "Other".
 
 - **Frontend**: HTML/CSS/JavaScript
 - **Backend**: Python Flask
-- **OCR**: Tesseract via pytesseract
+- **OCR**: OCR.space free API
 - **Excel Export**: SheetJS (browser-side)
+- **Hosting**: Vercel
