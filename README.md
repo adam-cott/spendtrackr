@@ -1,77 +1,68 @@
 # Receipt Spend Tracker
 
-A web application that processes receipt photos and tracks expenses. Works in **demo mode** by default (no API key needed), or enable real AI-powered receipt scanning with a Claude API key.
+A web application that scans receipt photos using OCR and tracks expenses. Works locally without any external APIs.
 
 ## Features
 
 - Upload receipt images (JPG, PNG)
-- AI-powered receipt analysis (or demo mode with sample data)
+- OCR-powered receipt scanning (Tesseract)
+- Auto-extracts vendor, total amount, and date
 - Auto-categorization of vendors
 - Edit extracted data before saving
-- Track expenses with payment source and descriptions
 - Export expenses to Excel (.xlsx)
 - Data persists in browser localStorage
 
 ---
 
-## Deploy to Vercel (Step-by-Step)
+## Setup
 
-### Step 1: Push to GitHub
+### 1. Install Tesseract OCR
 
+**Windows:**
+1. Download installer from: https://github.com/UB-Mannheim/tesseract/wiki
+2. Run the installer (default path: `C:\Program Files\Tesseract-OCR`)
+3. Add to PATH or the app will auto-detect it
+
+**Mac:**
 ```bash
-# Initialize git (if not already done)
-git init
-
-# Add all files
-git add .
-
-# Commit
-git commit -m "Receipt Spend Tracker app"
-
-# Create a new repo on GitHub, then:
-git remote add origin https://github.com/YOUR_USERNAME/receipt-tracker.git
-git branch -M main
-git push -u origin main
+brew install tesseract
 ```
 
-### Step 2: Deploy on Vercel
+**Linux:**
+```bash
+sudo apt install tesseract-ocr
+```
 
-1. Go to [vercel.com](https://vercel.com) and sign in with GitHub
-2. Click **"Add New Project"**
-3. Select your `receipt-tracker` repository
-4. Click **"Deploy"** (no configuration needed!)
-5. Wait for deployment to complete
-6. Your app is live at `https://your-project.vercel.app`
-
-That's it! The app works immediately in **demo mode**.
-
----
-
-## Optional: Enable Real Receipt Scanning
-
-To use Claude AI for actual receipt analysis:
-
-1. Get an API key from [console.anthropic.com](https://console.anthropic.com)
-2. In Vercel dashboard, go to your project → **Settings** → **Environment Variables**
-3. Add: `ANTHROPIC_API_KEY` = `sk-ant-...your-key...`
-4. Redeploy (or it will apply on next deploy)
-
----
-
-## Local Development
+### 2. Install Python Dependencies
 
 ```bash
-# Install dependencies
 pip install -r requirements.txt
+```
 
-# Run the API server
+### 3. Run the App
+
+```bash
 python api/analyze.py
+```
 
-# In another terminal, serve the frontend
+Then open `index.html` in your browser, or serve it:
+
+```bash
+# In another terminal
 python -m http.server 8000
-
 # Open http://localhost:8000
 ```
+
+---
+
+## Deploy to Vercel
+
+> **Note:** Vercel's serverless environment doesn't include Tesseract by default. For cloud deployment, you'd need to use a custom runtime or Docker. This app is designed primarily for local use.
+
+For local/self-hosted deployment:
+1. Push to GitHub
+2. Deploy on a server with Tesseract installed
+3. Run with gunicorn or similar
 
 ---
 
@@ -80,16 +71,41 @@ python -m http.server 8000
 ```
 .
 ├── api/
-│   └── analyze.py      # Vercel serverless function
+│   └── analyze.py      # Flask API with Tesseract OCR
 ├── index.html          # Web frontend
-├── vercel.json         # Vercel configuration
+├── vercel.json         # Vercel config (limited support)
 ├── requirements.txt    # Python dependencies
 └── README.md
 ```
 
+## How It Works
+
+1. Upload a receipt image
+2. Tesseract OCR extracts text from the image
+3. Parser identifies:
+   - **Vendor**: Matches known vendors or uses first text line
+   - **Total**: Looks for "Total" labels or largest dollar amount
+   - **Date**: Recognizes common date formats
+4. Auto-categorizes based on vendor name
+5. Review/edit and save to your expense list
+6. Export to Excel anytime
+
+## Supported Vendors (Auto-categorized)
+
+| Category | Vendors |
+|----------|---------|
+| Fast Food | McDonald's, Burger King, Wendy's, Taco Bell, Chick-fil-A, Subway, Chipotle |
+| Gas | Shell, Exxon, Chevron, BP, Mobil, Speedway |
+| Retail | Target, Walmart, Costco, Amazon, Best Buy |
+| Groceries | Kroger, Whole Foods, Trader Joe's, Safeway, Aldi, Publix |
+| Coffee | Starbucks, Dunkin', Peet's |
+| Pharmacy | CVS, Walgreens, Rite Aid |
+
+Unknown vendors are categorized as "Other".
+
 ## Tech Stack
 
-- **Frontend**: Vanilla HTML/CSS/JavaScript
-- **Backend**: Python Flask (Vercel Serverless)
-- **AI**: Claude Sonnet (optional)
-- **Excel Export**: SheetJS
+- **Frontend**: HTML/CSS/JavaScript
+- **Backend**: Python Flask
+- **OCR**: Tesseract via pytesseract
+- **Excel Export**: SheetJS (browser-side)

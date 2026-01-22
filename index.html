@@ -304,28 +304,7 @@
             background: none;
         }
 
-        .demo-notice {
-            background: #fff3cd;
-            color: #856404;
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            border: 1px solid #ffc107;
-        }
-
-        .demo-badge {
-            display: inline-block;
-            background: #ffc107;
-            color: #856404;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 4px;
-            margin-left: 8px;
-            vertical-align: middle;
-        }
-    </style>
+            </style>
 </head>
 
 <body>
@@ -352,7 +331,7 @@
         <div class="card hidden" id="loadingCard">
             <div class="loading">
                 <div class="spinner"></div>
-                <span>Analyzing receipt with AI...</span>
+                <span>Scanning receipt with OCR...</span>
             </div>
         </div>
 
@@ -362,10 +341,7 @@
         <!-- Results Form -->
         <div class="card hidden" id="resultsCard">
             <h2>Extracted Data</h2>
-            <div class="success" id="successMsg">Receipt analyzed successfully! Review and edit the details below.</div>
-            <div class="demo-notice hidden" id="demoNotice">
-                <strong>Demo Mode:</strong> Showing sample data. Add an ANTHROPIC_API_KEY to enable real receipt scanning.
-            </div>
+            <div class="success" id="successMsg">Receipt scanned successfully! Review and edit the details below.</div>
 
             <form id="expenseForm">
                 <div class="form-row">
@@ -555,14 +531,6 @@
                 document.getElementById('category').value = result.data.category || 'Other';
                 document.getElementById('description').value = '';
                 document.getElementById('paymentSource').value = 'Credit Card';
-
-                // Show demo mode notice if applicable
-                const demoNotice = document.getElementById('demoNotice');
-                if (result.mode === 'demo') {
-                    demoNotice.classList.remove('hidden');
-                } else {
-                    demoNotice.classList.add('hidden');
-                }
 
                 loadingCard.classList.add('hidden');
                 resultsCard.classList.remove('hidden');

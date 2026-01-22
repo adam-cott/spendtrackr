@@ -1,22 +1,31 @@
 """
-Vercel serverless function for receipt analysis.
-Works in demo mode without API key, or uses Claude Vision if key is provided.
+Vercel serverless function for receipt analysis using Tesseract OCR.
+Works locally without any external APIs.
 """
 
-import json
+import base64
+import io
 import os
-import random
-from datetime import datetime, timedelta
+import re
+from datetime import datetime
 
 from flask import Flask, request, jsonify
+from PIL import Image
+import pytesseract
 
 app = Flask(__name__)
 
+# Configure Tesseract path for Windows (adjust if needed)
+if os.name == 'nt':
+    tesseract_path = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    if os.path.exists(tesseract_path):
+        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+
 # Default vendor to category mapping
 VENDOR_CATEGORIES = {
-    "mcdonald's": "Fast Food",
+    "mcdonald": "Fast Food",
     "burger king": "Fast Food",
-    "wendy's": "Fast Food",
+    "wendy": "Fast Food",
     "taco bell": "Fast Food",
     "chick-fil-a": "Fast Food",
     "subway": "Fast Food",
@@ -34,32 +43,26 @@ VENDOR_CATEGORIES = {
     "best buy": "Retail",
     "kroger": "Groceries",
     "whole foods": "Groceries",
-    "trader joe's": "Groceries",
+    "trader joe": "Groceries",
     "safeway": "Groceries",
     "aldi": "Groceries",
     "publix": "Groceries",
     "starbucks": "Coffee",
     "dunkin": "Coffee",
-    "peet's": "Coffee",
+    "peet": "Coffee",
     "cvs": "Pharmacy",
     "walgreens": "Pharmacy",
     "rite aid": "Pharmacy",
 }
 
-# Demo vendors with realistic price ranges
-DEMO_RECEIPTS = [
-    {"vendor": "Starbucks", "category": "Coffee", "min": 4.50, "max": 12.00},
-    {"vendor": "McDonald's", "category": "Fast Food", "min": 6.00, "max": 15.00},
-    {"vendor": "Target", "category": "Retail", "min": 15.00, "max": 85.00},
-    {"vendor": "Shell Gas Station", "category": "Gas", "min": 25.00, "max": 65.00},
-    {"vendor": "Whole Foods Market", "category": "Groceries", "min": 35.00, "max": 120.00},
-    {"vendor": "CVS Pharmacy", "category": "Pharmacy", "min": 8.00, "max": 45.00},
-    {"vendor": "Chipotle", "category": "Fast Food", "min": 9.00, "max": 18.00},
-    {"vendor": "Walmart", "category": "Retail", "min": 20.00, "max": 150.00},
-    {"vendor": "Trader Joe's", "category": "Groceries", "min": 25.00, "max": 80.00},
-    {"vendor": "Dunkin'", "category": "Coffee", "min": 3.50, "max": 10.00},
-    {"vendor": "Best Buy", "category": "Retail", "min": 15.00, "max": 200.00},
-    {"vendor": "Costco", "category": "Groceries", "min": 50.00, "max": 250.00},
+# Common vendor names to look for in receipts
+KNOWN_VENDORS = [
+    "McDonald's", "Burger King", "Wendy's", "Taco Bell", "Chick-fil-A",
+    "Subway", "Chipotle", "Shell", "Exxon", "Chevron", "BP", "Mobil",
+    "Speedway", "Target", "Walmart", "Costco", "Amazon", "Best Buy",
+    "Kroger", "Whole Foods", "Trader Joe's", "Safeway", "Aldi", "Publix",
+    "Starbucks", "Dunkin", "Peet's", "CVS", "Walgreens", "Rite Aid",
+    "Home Depot", "Lowe's", "Walgreens", "7-Eleven", "Circle K"
 ]
 
 
@@ -67,151 +70,167 @@ def get_category(vendor: str) -> str:
     """Get category for a vendor based on the mapping."""
     vendor_lower = vendor.lower()
     for known_vendor, category in VENDOR_CATEGORIES.items():
-        if known_vendor in vendor_lower or vendor_lower in known_vendor:
+        if known_vendor in vendor_lower:
             return category
     return "Other"
 
 
-def generate_demo_receipt():
-    """Generate realistic mock receipt data."""
-    receipt = random.choice(DEMO_RECEIPTS)
+def extract_total(text: str) -> float | None:
+    """Extract total amount from receipt text."""
+    lines = text.split('\n')
 
-    # Random amount within range, rounded to cents
-    amount = round(random.uniform(receipt["min"], receipt["max"]), 2)
+    # Patterns for total amount (prioritized)
+    total_patterns = [
+        r'(?:total|grand total|amount due|balance due|total due)\s*[:\$]?\s*\$?\s*(\d+[.,]\d{2})',
+        r'(?:total|grand total)\s+(\d+[.,]\d{2})',
+        r'\$\s*(\d+[.,]\d{2})\s*$',
+    ]
 
-    # Random date within last 7 days
-    days_ago = random.randint(0, 7)
-    date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
+    # First, look for explicit "total" lines
+    for line in reversed(lines):  # Check from bottom up
+        line_lower = line.lower().strip()
+        for pattern in total_patterns:
+            match = re.search(pattern, line_lower, re.IGNORECASE)
+            if match:
+                amount_str = match.group(1).replace(',', '.')
+                try:
+                    return float(amount_str)
+                except ValueError:
+                    continue
+
+    # Fallback: find the largest dollar amount (likely the total)
+    all_amounts = re.findall(r'\$?\s*(\d+[.,]\d{2})', text)
+    if all_amounts:
+        amounts = []
+        for amt in all_amounts:
+            try:
+                amounts.append(float(amt.replace(',', '.')))
+            except ValueError:
+                continue
+        if amounts:
+            return max(amounts)
+
+    return None
+
+
+def extract_date(text: str) -> str:
+    """Extract date from receipt text."""
+    # Common date patterns
+    date_patterns = [
+        # MM/DD/YYYY or MM-DD-YYYY
+        r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
+        # Month DD, YYYY
+        r'((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{2,4})',
+        # YYYY-MM-DD
+        r'(\d{4}-\d{2}-\d{2})',
+    ]
+
+    for pattern in date_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            date_str = match.group(1)
+            # Try to parse and normalize the date
+            for fmt in ['%m/%d/%Y', '%m/%d/%y', '%m-%d-%Y', '%m-%d-%y',
+                       '%Y-%m-%d', '%B %d, %Y', '%b %d, %Y', '%b %d %Y']:
+                try:
+                    parsed = datetime.strptime(date_str.replace(',', ''), fmt)
+                    return parsed.strftime('%Y-%m-%d')
+                except ValueError:
+                    continue
+            # Return as-is if parsing fails
+            return date_str
+
+    # Default to today
+    return datetime.now().strftime('%Y-%m-%d')
+
+
+def extract_vendor(text: str) -> str:
+    """Extract vendor name from receipt text."""
+    lines = text.split('\n')
+
+    # Check first few lines for known vendors
+    for line in lines[:10]:
+        line_clean = line.strip()
+        if not line_clean:
+            continue
+
+        # Check against known vendors
+        for vendor in KNOWN_VENDORS:
+            if vendor.lower() in line_clean.lower():
+                return vendor
+
+        # Check category mapping
+        for vendor_key in VENDOR_CATEGORIES.keys():
+            if vendor_key in line_clean.lower():
+                # Return the line as vendor name (cleaned up)
+                return line_clean[:50]  # Limit length
+
+    # Fallback: use first non-empty line that looks like a name
+    for line in lines[:5]:
+        line_clean = line.strip()
+        # Skip lines that are just numbers, dates, or too short
+        if line_clean and len(line_clean) > 3:
+            if not re.match(r'^[\d\s\-\/\.\$]+$', line_clean):
+                return line_clean[:50]
+
+    return "Unknown Vendor"
+
+
+def analyze_receipt_ocr(image_data: str, media_type: str) -> dict:
+    """Analyze receipt image using Tesseract OCR."""
+    # Decode base64 image
+    if "base64," in image_data:
+        image_data = image_data.split("base64,")[1]
+
+    image_bytes = base64.b64decode(image_data)
+    image = Image.open(io.BytesIO(image_bytes))
+
+    # Convert to RGB if necessary
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+
+    # Perform OCR
+    text = pytesseract.image_to_string(image)
+
+    # Extract data from OCR text
+    total = extract_total(text)
+    vendor = extract_vendor(text)
+    date = extract_date(text)
+    category = get_category(vendor)
 
     return {
-        "total": amount,
-        "vendor": receipt["vendor"],
+        "total": total,
+        "vendor": vendor,
         "date": date,
-        "category": receipt["category"],
+        "category": category,
+        "raw_text": text[:500]  # Include some raw text for debugging
     }
-
-
-def parse_receipt_response(response: str) -> dict:
-    """Parse the structured response from Claude."""
-    result = {
-        "total": None,
-        "vendor": "Unknown",
-        "date": datetime.now().strftime("%Y-%m-%d"),
-    }
-
-    for line in response.strip().split("\n"):
-        line = line.strip()
-        if line.startswith("TOTAL:"):
-            amount_str = line.replace("TOTAL:", "").strip()
-            amount_str = amount_str.replace("$", "").replace(",", "").strip()
-            try:
-                result["total"] = float(amount_str)
-            except ValueError:
-                result["total"] = None
-        elif line.startswith("VENDOR:"):
-            result["vendor"] = line.replace("VENDOR:", "").strip()
-        elif line.startswith("DATE:"):
-            date_str = line.replace("DATE:", "").strip()
-            if date_str.lower() != "unknown":
-                result["date"] = date_str
-
-    return result
-
-
-def analyze_with_claude(image_data: str, media_type: str, api_key: str) -> dict:
-    """Use Claude to analyze a receipt image."""
-    import anthropic
-
-    client = anthropic.Anthropic(api_key=api_key)
-
-    prompt = """Analyze this receipt image and extract the following information:
-1. Total amount (the final total paid, including tax)
-2. Vendor/store name
-3. Purchase date
-
-Respond in this exact format (use "Unknown" if you cannot determine a value):
-TOTAL: [amount as a number, e.g., 25.99]
-VENDOR: [store/vendor name]
-DATE: [date in YYYY-MM-DD format, or "Unknown" if not visible]
-
-Only provide these three lines, nothing else."""
-
-    message = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=256,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": image_data,
-                        },
-                    },
-                    {
-                        "type": "text",
-                        "text": prompt,
-                    },
-                ],
-            }
-        ],
-    )
-
-    response_text = message.content[0].text
-    extracted = parse_receipt_response(response_text)
-    extracted["category"] = get_category(extracted["vendor"])
-    return extracted
 
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze_receipt():
     """Analyze a receipt image and return extracted data."""
     try:
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-
         # Get image data from request
         data = request.get_json()
         if not data or "image" not in data:
             return jsonify({"error": "No image data provided"}), 400
 
-        # Check if we have a valid API key
-        if api_key and api_key.startswith("sk-ant-"):
-            # Use Claude Vision for real analysis
-            image_data = data["image"]
-            media_type = data.get("media_type", "image/jpeg")
+        image_data = data["image"]
+        media_type = data.get("media_type", "image/jpeg")
 
-            # Remove data URL prefix if present
-            if "base64," in image_data:
-                image_data = image_data.split("base64,")[1]
+        # Analyze with OCR
+        extracted = analyze_receipt_ocr(image_data, media_type)
 
-            try:
-                extracted = analyze_with_claude(image_data, media_type, api_key)
-                return jsonify({
-                    "success": True,
-                    "mode": "live",
-                    "data": extracted
-                })
-            except Exception as e:
-                # Fall back to demo mode if API fails
-                extracted = generate_demo_receipt()
-                return jsonify({
-                    "success": True,
-                    "mode": "demo",
-                    "message": "API error, using demo mode",
-                    "data": extracted
-                })
-        else:
-            # Demo mode - generate mock data
-            extracted = generate_demo_receipt()
-            return jsonify({
-                "success": True,
-                "mode": "demo",
-                "data": extracted
-            })
+        return jsonify({
+            "success": True,
+            "data": extracted
+        })
 
+    except pytesseract.TesseractNotFoundError:
+        return jsonify({
+            "error": "Tesseract OCR not installed. Please install Tesseract-OCR."
+        }), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -219,16 +238,19 @@ def analyze_receipt():
 @app.route("/api/health", methods=["GET"])
 def health_check():
     """Health check endpoint."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    has_key = bool(api_key and api_key.startswith("sk-ant-"))
+    try:
+        # Test if Tesseract is available
+        pytesseract.get_tesseract_version()
+        tesseract_ok = True
+    except:
+        tesseract_ok = False
+
     return jsonify({
-        "status": "ok",
-        "mode": "live" if has_key else "demo"
+        "status": "ok" if tesseract_ok else "degraded",
+        "tesseract_installed": tesseract_ok
     })
 
 
 # For local development
 if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
     app.run(debug=True, port=5000)
