@@ -5,126 +5,221 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Receipt Spend Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #FAF9F7;
+            --bg-card: #FFFFFF;
+            --bg-subtle: #F5F4F1;
+            --text-primary: #1C1917;
+            --text-secondary: #57534E;
+            --text-muted: #A8A29E;
+            --border-light: #E7E5E4;
+            --border-medium: #D6D3D1;
+            --accent: #C2410C;
+            --accent-hover: #9A3412;
+            --accent-light: #FFF7ED;
+            --success: #166534;
+            --success-bg: #F0FDF4;
+            --error: #991B1B;
+            --error-bg: #FEF2F2;
+            --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04);
+            --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.04);
+            --shadow-lg: 0 12px 32px rgba(28, 25, 23, 0.08), 0 4px 8px rgba(28, 25, 23, 0.04);
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --font-sans: 'Outfit', system-ui, sans-serif;
+            --font-serif: 'Source Serif 4', Georgia, serif;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
 
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
-            padding: 40px 20px;
+            padding: 48px 24px 80px;
+            line-height: 1.5;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 720px;
             margin: 0 auto;
         }
 
-        h1 {
+        /* Header */
+        .header {
             text-align: center;
-            color: #333;
+            margin-bottom: 48px;
+        }
+
+        .header h1 {
+            font-family: var(--font-serif);
+            font-size: 2.25rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
             margin-bottom: 8px;
         }
 
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
+        .header p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
         }
 
+        /* Cards */
         .card {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            background: var(--bg-card);
+            padding: 28px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
             margin-bottom: 24px;
+            border: 1px solid var(--border-light);
         }
 
-        .card h2 {
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #eee;
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-light);
         }
 
+        .card-header h2 {
+            font-family: var(--font-serif);
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--text-muted);
+        }
+
+        /* Upload Area */
         .upload-area {
-            border: 2px dashed #ddd;
-            border-radius: 8px;
-            padding: 40px 20px;
+            border: 2px dashed var(--border-medium);
+            border-radius: var(--radius-md);
+            padding: 48px 24px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
+            background: linear-gradient(135deg, var(--bg-subtle) 0%, var(--bg-card) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
         }
 
         .upload-area:hover {
-            border-color: #666;
-            background: #fafafa;
+            border-color: var(--accent);
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--bg-card) 100%);
         }
 
         .upload-area.dragover {
-            border-color: #333;
-            background: #f0f0f0;
+            border-color: var(--accent);
+            background: var(--accent-light);
+            transform: scale(1.01);
         }
 
         .upload-area img {
             max-width: 100%;
-            max-height: 300px;
-            border-radius: 8px;
-            margin-bottom: 12px;
+            max-height: 280px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-md);
         }
 
         .upload-icon {
-            font-size: 48px;
-            color: #ccc;
-            margin-bottom: 12px;
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            color: var(--text-muted);
+            transition: color 0.2s ease;
+        }
+
+        .upload-area:hover .upload-icon {
+            color: var(--accent);
         }
 
         .upload-text {
-            color: #666;
-            margin-bottom: 8px;
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
         }
 
         .upload-hint {
-            font-size: 12px;
-            color: #999;
+            font-size: 0.8125rem;
+            color: var(--text-muted);
         }
 
         input[type="file"] {
             display: none;
         }
 
+        /* Form Elements */
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
 
         .form-group label {
             display: block;
-            font-size: 14px;
+            font-size: 0.8125rem;
             font-weight: 500;
-            color: #333;
-            margin-bottom: 6px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
 
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 12px;
-            font-size: 14px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            padding: 14px 16px;
+            font-size: 0.9375rem;
+            font-family: var(--font-sans);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-sm);
             outline: none;
-            transition: border-color 0.2s;
+            transition: all 0.2s ease;
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
         }
 
         .form-group input:focus,
         .form-group select:focus {
-            border-color: #333;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.1);
         }
 
         .form-row {
@@ -139,150 +234,220 @@
             }
         }
 
+        /* Buttons */
         button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             width: 100%;
-            padding: 14px;
-            font-size: 16px;
+            padding: 14px 24px;
+            font-size: 0.9375rem;
             font-weight: 500;
-            background: #333;
+            font-family: var(--font-sans);
+            background: var(--accent);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: var(--radius-sm);
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s ease;
         }
 
         button:hover {
-            background: #555;
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        button:active {
+            transform: translateY(0);
         }
 
         button:disabled {
-            background: #ccc;
+            background: var(--border-medium);
+            color: var(--text-muted);
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .btn-secondary {
-            background: #fff;
-            color: #333;
-            border: 2px solid #333;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-medium);
         }
 
         .btn-secondary:hover {
-            background: #f5f5f5;
+            background: var(--bg-subtle);
+            border-color: var(--border-medium);
         }
 
         .btn-success {
-            background: #28a745;
+            background: var(--success);
         }
 
         .btn-success:hover {
-            background: #218838;
+            background: #14532D;
         }
 
         .hidden {
             display: none !important;
         }
 
+        /* Loading State */
         .loading {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            padding: 20px;
-            color: #666;
+            gap: 14px;
+            padding: 32px;
+            color: var(--text-secondary);
         }
 
         .spinner {
-            width: 24px;
-            height: 24px;
-            border: 3px solid #eee;
-            border-top-color: #333;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-light);
+            border-top-color: var(--accent);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+            to { transform: rotate(360deg); }
         }
 
+        /* Alerts */
         .error {
-            background: #fee;
-            color: #c00;
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin-bottom: 16px;
-            font-size: 14px;
+            background: var(--error-bg);
+            color: var(--error);
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 20px;
+            font-size: 0.875rem;
+            border: 1px solid #FECACA;
         }
 
         .success {
-            background: #efe;
-            color: #070;
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin-bottom: 16px;
-            font-size: 14px;
+            background: var(--success-bg);
+            color: var(--success);
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 20px;
+            font-size: 0.875rem;
+            border: 1px solid #BBF7D0;
         }
 
-        /* Expense History Table */
+        /* Expense Table */
         .expense-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 0.875rem;
         }
 
         .expense-table th {
             text-align: left;
-            padding: 12px 8px;
-            background: #f5f5f5;
+            padding: 12px 12px 12px 0;
+            font-size: 0.75rem;
             font-weight: 500;
-            border-bottom: 2px solid #ddd;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-light);
         }
 
         .expense-table td {
-            padding: 12px 8px;
-            border-bottom: 1px solid #eee;
+            padding: 16px 12px 16px 0;
+            border-bottom: 1px solid var(--border-light);
+            vertical-align: middle;
         }
 
-        .expense-table tr:hover {
-            background: #fafafa;
+        .expense-table tbody tr {
+            transition: background 0.15s ease;
+        }
+
+        .expense-table tbody tr:hover {
+            background: var(--bg-subtle);
+        }
+
+        .vendor-cell {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .date-cell {
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
         }
 
         .amount {
+            font-family: var(--font-serif);
             font-weight: 600;
-            color: #c00;
+            font-size: 0.9375rem;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
         }
 
         .category-badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.6875rem;
             font-weight: 500;
-            background: #e8f5e9;
-            color: #2e7d32;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
         }
+
+        .category-badge[data-category="Fast Food"] { background: #FEF3C7; color: #92400E; }
+        .category-badge[data-category="Gas"] { background: #E0E7FF; color: #3730A3; }
+        .category-badge[data-category="Groceries"] { background: #D1FAE5; color: #065F46; }
+        .category-badge[data-category="Retail"] { background: #FCE7F3; color: #9D174D; }
+        .category-badge[data-category="Coffee"] { background: #FED7AA; color: #9A3412; }
+        .category-badge[data-category="Pharmacy"] { background: #CFFAFE; color: #155E75; }
+        .category-badge[data-category="Restaurant"] { background: #FEE2E2; color: #991B1B; }
+        .category-badge[data-category="Entertainment"] { background: #EDE9FE; color: #5B21B6; }
+        .category-badge[data-category="Utilities"] { background: #E5E7EB; color: #374151; }
+        .category-badge[data-category="Other"] { background: #F5F5F4; color: #57534E; }
 
         .empty-state {
             text-align: center;
-            padding: 40px 20px;
-            color: #999;
+            padding: 48px 24px;
+            color: var(--text-muted);
         }
 
-        .total-row {
-            font-weight: 600;
-            background: #f5f5f5;
+        .empty-state-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            color: var(--border-medium);
         }
 
         .total-row td {
-            border-top: 2px solid #333;
+            padding-top: 20px;
+            border-bottom: none;
+            border-top: 2px solid var(--text-primary);
         }
 
+        .total-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .total-amount {
+            font-family: var(--font-serif);
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Actions */
         .actions {
             display: flex;
-            gap: 8px;
-            margin-top: 16px;
+            gap: 12px;
+            margin-top: 20px;
         }
 
         .actions button {
@@ -292,46 +457,88 @@
         .delete-btn {
             background: none;
             border: none;
-            color: #999;
+            color: var(--text-muted);
             cursor: pointer;
-            padding: 4px 8px;
-            font-size: 16px;
-            width: auto;
+            padding: 6px;
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-sm);
+            transition: all 0.15s ease;
         }
 
         .delete-btn:hover {
-            color: #c00;
-            background: none;
+            color: var(--error);
+            background: var(--error-bg);
+            transform: none;
+            box-shadow: none;
         }
 
-            </style>
+        .delete-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Animation for cards */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        .card:nth-child(2) { animation-delay: 0.05s; }
+        .card:nth-child(3) { animation-delay: 0.1s; }
+        .card:nth-child(4) { animation-delay: 0.15s; }
+    </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>Receipt Spend Tracker</h1>
-        <p class="subtitle">Upload receipt photos to automatically track expenses</p>
+        <header class="header">
+            <h1>Receipt Tracker</h1>
+            <p>Scan receipts and track your spending</p>
+        </header>
 
         <!-- Upload Section -->
         <div class="card" id="uploadCard">
-            <h2>Upload Receipt</h2>
+            <div class="card-header">
+                <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <h2>Upload Receipt</h2>
+            </div>
             <div class="upload-area" id="uploadArea">
                 <div id="uploadPlaceholder">
-                    <div class="upload-icon">&#128247;</div>
-                    <div class="upload-text">Click or drag & drop receipt image</div>
-                    <div class="upload-hint">Supports JPG, PNG</div>
+                    <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <div class="upload-text">Drop your receipt here or click to browse</div>
+                    <div class="upload-hint">Supports JPG and PNG images</div>
                 </div>
                 <img id="previewImage" class="hidden" alt="Receipt preview">
             </div>
             <input type="file" id="fileInput" accept="image/jpeg,image/png">
-            <button id="analyzeBtn" class="hidden" style="margin-top: 16px;">Analyze Receipt</button>
+            <button id="analyzeBtn" class="hidden" style="margin-top: 20px;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+                Analyze Receipt
+            </button>
         </div>
 
         <!-- Loading State -->
         <div class="card hidden" id="loadingCard">
             <div class="loading">
                 <div class="spinner"></div>
-                <span>Scanning receipt with OCR...</span>
+                <span>Scanning receipt...</span>
             </div>
         </div>
 
@@ -340,8 +547,13 @@
 
         <!-- Results Form -->
         <div class="card hidden" id="resultsCard">
-            <h2>Extracted Data</h2>
-            <div class="success" id="successMsg">Receipt scanned successfully! Review and edit the details below.</div>
+            <div class="card-header">
+                <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                <h2>Review Details</h2>
+            </div>
+            <div class="success" id="successMsg">Receipt scanned successfully. Review the details below.</div>
 
             <form id="expenseForm">
                 <div class="form-row">
@@ -350,14 +562,14 @@
                         <input type="date" id="date" required>
                     </div>
                     <div class="form-group">
-                        <label for="amount">Amount ($)</label>
-                        <input type="number" id="amount" step="0.01" min="0" required>
+                        <label for="amount">Amount</label>
+                        <input type="number" id="amount" step="0.01" min="0" placeholder="0.00" required>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label for="vendor">Vendor</label>
-                    <input type="text" id="vendor" required>
+                    <input type="text" id="vendor" placeholder="Store name" required>
                 </div>
 
                 <div class="form-row">
@@ -377,7 +589,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="paymentSource">Payment Source</label>
+                        <label for="paymentSource">Payment</label>
                         <select id="paymentSource">
                             <option value="Credit Card">Credit Card</option>
                             <option value="Debit Card">Debit Card</option>
@@ -388,8 +600,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="description">Description (optional)</label>
-                    <input type="text" id="description" placeholder="Add notes about this expense">
+                    <label for="description">Note (optional)</label>
+                    <input type="text" id="description" placeholder="Add a note about this expense">
                 </div>
 
                 <div class="actions">
@@ -401,10 +613,18 @@
 
         <!-- Expense History -->
         <div class="card">
-            <h2>Expense History</h2>
+            <div class="card-header">
+                <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                <h2>Expense History</h2>
+            </div>
             <div id="expenseHistory">
                 <div class="empty-state" id="emptyState">
-                    No expenses recorded yet. Upload a receipt to get started.
+                    <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <p>No expenses yet. Upload a receipt to get started.</p>
                 </div>
                 <table class="expense-table hidden" id="expenseTable">
                     <thead>
@@ -412,7 +632,7 @@
                             <th>Date</th>
                             <th>Vendor</th>
                             <th>Category</th>
-                            <th>Amount</th>
+                            <th style="text-align: right;">Amount</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -420,8 +640,8 @@
                     </tbody>
                     <tfoot>
                         <tr class="total-row">
-                            <td colspan="3"><strong>Total</strong></td>
-                            <td id="totalAmount" class="amount">$0.00</td>
+                            <td colspan="3" class="total-label">Total Spent</td>
+                            <td id="totalAmount" class="total-amount" style="text-align: right;">$0.00</td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -429,7 +649,12 @@
             </div>
             <div class="actions" id="exportActions" style="display: none;">
                 <button type="button" class="btn-secondary" onclick="clearAllExpenses()">Clear All</button>
-                <button type="button" onclick="exportToExcel()">Download Excel</button>
+                <button type="button" onclick="exportToExcel()">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Export to Excel
+                </button>
             </div>
         </div>
     </div>
@@ -616,11 +841,17 @@
 
             tbody.innerHTML = sorted.map(exp => `
                 <tr>
-                    <td>${formatDate(exp.date)}</td>
-                    <td>${escapeHtml(exp.vendor)}</td>
-                    <td><span class="category-badge">${escapeHtml(exp.category)}</span></td>
-                    <td class="amount">$${exp.amount.toFixed(2)}</td>
-                    <td><button class="delete-btn" onclick="deleteExpense(${exp.id})" title="Delete">&#10005;</button></td>
+                    <td class="date-cell">${formatDate(exp.date)}</td>
+                    <td class="vendor-cell">${escapeHtml(exp.vendor)}</td>
+                    <td><span class="category-badge" data-category="${escapeHtml(exp.category)}">${escapeHtml(exp.category)}</span></td>
+                    <td class="amount" style="text-align: right;">$${exp.amount.toFixed(2)}</td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteExpense(${exp.id})" title="Delete">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </td>
                 </tr>
             `).join('');
 
