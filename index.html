@@ -10,32 +10,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Green color scheme */
-            --primary: #15803d;
-            --primary-dark: #166534;
-            --primary-darker: #14532d;
-            --primary-light: #dcfce7;
-            --primary-subtle: #f0fdf4;
+            /* Earthy Green color scheme */
+            --primary: #4d7c0f;
+            --primary-dark: #3f6212;
+            --primary-darker: #365314;
+            --primary-light: #ecfccb;
+            --primary-subtle: #f7fee7;
 
-            /* Secondary (orange for analyze button) */
-            --secondary: #ea580c;
-            --secondary-dark: #c2410c;
-            --secondary-light: #fff7ed;
+            /* Secondary (warm brown) */
+            --secondary: #78716c;
+            --secondary-dark: #57534e;
+            --secondary-light: #f5f5f4;
 
-            /* Neutrals */
-            --bg-primary: #FAFAF9;
-            --bg-card: #FFFFFF;
-            --bg-subtle: #F5F5F4;
-            --text-primary: #18181b;
-            --text-secondary: #52525b;
-            --text-muted: #a1a1aa;
-            --border-light: #e4e4e7;
-            --border-medium: #d4d4d8;
+            /* Earthy Neutrals - cream/beige tones */
+            --bg-primary: #faf8f5;
+            --bg-card: #fffdf9;
+            --bg-subtle: #f5f3ef;
+            --text-primary: #292524;
+            --text-secondary: #57534e;
+            --text-muted: #a8a29e;
+            --border-light: #e7e5e4;
+            --border-medium: #d6d3d1;
 
             /* Status colors */
-            --success: #16a34a;
-            --success-bg: #f0fdf4;
-            --error: #dc2626;
+            --success: #4d7c0f;
+            --success-bg: #f7fee7;
+            --error: #b91c1c;
             --error-bg: #fef2f2;
 
             /* Shadows */
@@ -101,60 +101,6 @@
             font-size: 1.125rem;
             color: var(--text-secondary);
             font-weight: 400;
-        }
-
-        /* Progress Steps */
-        .progress-steps {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 32px;
-        }
-
-        .step {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 24px;
-            font-size: 0.8125rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            background: var(--bg-subtle);
-            transition: all 0.3s ease;
-        }
-
-        .step.active {
-            background: var(--primary-light);
-            color: var(--primary-dark);
-        }
-
-        .step.completed {
-            background: var(--primary);
-            color: white;
-        }
-
-        .step-number {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--border-light);
-            color: var(--text-muted);
-        }
-
-        .step.active .step-number {
-            background: var(--primary);
-            color: white;
-        }
-
-        .step.completed .step-number {
-            background: white;
-            color: var(--primary);
         }
 
         /* Cards */
@@ -370,12 +316,12 @@
             border-color: var(--border-medium);
         }
 
-        .btn-orange {
-            background: var(--secondary);
+        .btn-brown {
+            background: #78716c;
         }
 
-        .btn-orange:hover {
-            background: var(--secondary-dark);
+        .btn-brown:hover {
+            background: #57534e;
         }
 
         .btn-success {
@@ -769,22 +715,6 @@
             <p>Scan receipts and track your spending effortlessly</p>
         </header>
 
-        <!-- Progress Steps -->
-        <div class="progress-steps" id="progressSteps">
-            <div class="step active" id="step1">
-                <span class="step-number">1</span>
-                Upload
-            </div>
-            <div class="step" id="step2">
-                <span class="step-number">2</span>
-                Review
-            </div>
-            <div class="step" id="step3">
-                <span class="step-number">3</span>
-                Save
-            </div>
-        </div>
-
         <!-- Upload Section -->
         <div class="card" id="uploadCard">
             <div class="card-header">
@@ -802,7 +732,7 @@
                 <img id="previewImage" class="hidden" alt="Receipt preview">
             </div>
             <input type="file" id="fileInput" accept="image/jpeg,image/png">
-            <button id="analyzeBtn" class="btn-orange hidden" style="margin-top: 24px;">
+            <button id="analyzeBtn" class="btn-brown hidden" style="margin-top: 24px;">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                 </svg>
@@ -963,7 +893,6 @@
         let currentImageData = null;
         let currentMediaType = null;
         let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
-        let currentStep = 1;
 
         // DOM Elements
         const uploadArea = document.getElementById('uploadArea');
@@ -1002,20 +931,6 @@
         });
         analyzeBtn.addEventListener('click', analyzeReceipt);
         expenseForm.addEventListener('submit', saveExpense);
-
-        function updateProgressSteps(step) {
-            currentStep = step;
-            const steps = ['step1', 'step2', 'step3'];
-            steps.forEach((id, index) => {
-                const el = document.getElementById(id);
-                el.classList.remove('active', 'completed');
-                if (index + 1 < step) {
-                    el.classList.add('completed');
-                } else if (index + 1 === step) {
-                    el.classList.add('active');
-                }
-            });
-        }
 
         function handleFile(file) {
             if (!file.type.match(/^image\/(jpeg|png)$/)) {
@@ -1073,7 +988,6 @@
 
                 loadingCard.classList.add('hidden');
                 resultsCard.classList.remove('hidden');
-                updateProgressSteps(2);
 
             } catch (error) {
                 loadingCard.classList.add('hidden');
@@ -1103,11 +1017,9 @@
             // Show success toast
             showSuccessToast();
 
-            // Update to step 3 briefly then reset
-            updateProgressSteps(3);
+            // Reset form after brief delay
             setTimeout(() => {
                 resetForm();
-                updateProgressSteps(1);
             }, 1500);
         }
 
@@ -1120,7 +1032,6 @@
 
         function cancelEntry() {
             resetForm();
-            updateProgressSteps(1);
         }
 
         function resetForm() {
