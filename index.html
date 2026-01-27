@@ -401,12 +401,8 @@
         .category-badge[data-category="food"] { background: #FEF3C7; color: #92400E; }
         .category-badge[data-category="textbooks"] { background: #DBEAFE; color: #1E40AF; }
         .category-badge[data-category="gas"] { background: #E0E7FF; color: #3730A3; }
-        .category-badge[data-category="groceries"] { background: #D1FAE5; color: #065F46; }
         .category-badge[data-category="retail"] { background: #FCE7F3; color: #9D174D; }
-        .category-badge[data-category="coffee"] { background: #FED7AA; color: #9A3412; }
-        .category-badge[data-category="pharmacy"] { background: #CFFAFE; color: #155E75; }
         .category-badge[data-category="entertainment"] { background: #EDE9FE; color: #5B21B6; }
-        .category-badge[data-category="utilities"] { background: #E5E7EB; color: #374151; }
         .category-badge[data-category="other"] { background: #F5F5F4; color: #57534E; }
 
         .empty-state {
@@ -579,12 +575,8 @@
                             <option value="food">Food</option>
                             <option value="textbooks">Textbooks</option>
                             <option value="gas">Gas</option>
-                            <option value="groceries">Groceries</option>
                             <option value="retail">Retail</option>
-                            <option value="coffee">Coffee</option>
-                            <option value="pharmacy">Pharmacy</option>
                             <option value="entertainment">Entertainment</option>
-                            <option value="utilities">Utilities</option>
                             <option value="other">Other</option>
                         </select>
                     </div>
@@ -592,11 +584,10 @@
                         <label for="paymentSource">Payment</label>
                         <select id="paymentSource">
                             <option value="Discover">Discover</option>
+                            <option value="CapOne">CapOne</option>
                             <option value="Cougar Cash">Cougar Cash</option>
-                            <option value="Credit Card">Credit Card</option>
-                            <option value="Debit Card">Debit Card</option>
+                            <option value="Venmo">Venmo</option>
                             <option value="Cash">Cash</option>
-                            <option value="Other">Other</option>
                         </select>
                     </div>
                 </div>
@@ -757,7 +748,7 @@
                 document.getElementById('amount').value = result.data.total || '';
                 document.getElementById('category').value = result.data.category || 'Other';
                 document.getElementById('description').value = '';
-                document.getElementById('paymentSource').value = 'Credit Card';
+                document.getElementById('paymentSource').value = 'Discover';
 
                 loadingCard.classList.add('hidden');
                 resultsCard.classList.remove('hidden');
