@@ -398,16 +398,16 @@
             letter-spacing: 0.03em;
         }
 
-        .category-badge[data-category="Fast Food"] { background: #FEF3C7; color: #92400E; }
-        .category-badge[data-category="Gas"] { background: #E0E7FF; color: #3730A3; }
-        .category-badge[data-category="Groceries"] { background: #D1FAE5; color: #065F46; }
-        .category-badge[data-category="Retail"] { background: #FCE7F3; color: #9D174D; }
-        .category-badge[data-category="Coffee"] { background: #FED7AA; color: #9A3412; }
-        .category-badge[data-category="Pharmacy"] { background: #CFFAFE; color: #155E75; }
-        .category-badge[data-category="Restaurant"] { background: #FEE2E2; color: #991B1B; }
-        .category-badge[data-category="Entertainment"] { background: #EDE9FE; color: #5B21B6; }
-        .category-badge[data-category="Utilities"] { background: #E5E7EB; color: #374151; }
-        .category-badge[data-category="Other"] { background: #F5F5F4; color: #57534E; }
+        .category-badge[data-category="food"] { background: #FEF3C7; color: #92400E; }
+        .category-badge[data-category="textbooks"] { background: #DBEAFE; color: #1E40AF; }
+        .category-badge[data-category="gas"] { background: #E0E7FF; color: #3730A3; }
+        .category-badge[data-category="groceries"] { background: #D1FAE5; color: #065F46; }
+        .category-badge[data-category="retail"] { background: #FCE7F3; color: #9D174D; }
+        .category-badge[data-category="coffee"] { background: #FED7AA; color: #9A3412; }
+        .category-badge[data-category="pharmacy"] { background: #CFFAFE; color: #155E75; }
+        .category-badge[data-category="entertainment"] { background: #EDE9FE; color: #5B21B6; }
+        .category-badge[data-category="utilities"] { background: #E5E7EB; color: #374151; }
+        .category-badge[data-category="other"] { background: #F5F5F4; color: #57534E; }
 
         .empty-state {
             text-align: center;
@@ -576,21 +576,23 @@
                     <div class="form-group">
                         <label for="category">Category</label>
                         <select id="category">
-                            <option value="Fast Food">Fast Food</option>
-                            <option value="Gas">Gas</option>
-                            <option value="Groceries">Groceries</option>
-                            <option value="Retail">Retail</option>
-                            <option value="Coffee">Coffee</option>
-                            <option value="Pharmacy">Pharmacy</option>
-                            <option value="Restaurant">Restaurant</option>
-                            <option value="Entertainment">Entertainment</option>
-                            <option value="Utilities">Utilities</option>
-                            <option value="Other">Other</option>
+                            <option value="food">Food</option>
+                            <option value="textbooks">Textbooks</option>
+                            <option value="gas">Gas</option>
+                            <option value="groceries">Groceries</option>
+                            <option value="retail">Retail</option>
+                            <option value="coffee">Coffee</option>
+                            <option value="pharmacy">Pharmacy</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="paymentSource">Payment</label>
                         <select id="paymentSource">
+                            <option value="Discover">Discover</option>
+                            <option value="Cougar Cash">Cougar Cash</option>
                             <option value="Credit Card">Credit Card</option>
                             <option value="Debit Card">Debit Card</option>
                             <option value="Cash">Cash</option>
@@ -843,7 +845,7 @@
                 <tr>
                     <td class="date-cell">${formatDate(exp.date)}</td>
                     <td class="vendor-cell">${escapeHtml(exp.vendor)}</td>
-                    <td><span class="category-badge" data-category="${escapeHtml(exp.category)}">${escapeHtml(exp.category)}</span></td>
+                    <td><span class="category-badge" data-category="${escapeHtml(exp.category)}">${capitalizeCategory(exp.category)}</span></td>
                     <td class="amount" style="text-align: right;">$${exp.amount.toFixed(2)}</td>
                     <td>
                         <button class="delete-btn" onclick="deleteExpense(${exp.id})" title="Delete">
@@ -859,20 +861,68 @@
             document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
         }
 
+        function getTerm(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1; // 1-12
+            const day = date.getDate();
+
+            // Create date boundaries for the year
+            // Jan 1 - Apr 28: Winter
+            // Apr 29 - Jun 22: Spring
+            // Jun 23 - Aug 14: Summer
+            // Aug 15 - Dec 31: Fall
+
+            const mmdd = month * 100 + day; // e.g., Jan 19 = 119, Apr 28 = 428
+
+            if (mmdd <= 428) {
+                return `${year} Winter`;
+            } else if (mmdd <= 622) {
+                return `${year} Spring`;
+            } else if (mmdd <= 814) {
+                return `${year} Summer`;
+            } else {
+                return `${year} Fall`;
+            }
+        }
+
+        function formatExcelDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const year = date.getFullYear();
+            return `${month}/${day}/${year}`;
+        }
+
+        function formatCurrency(amount) {
+            return `$${amount.toFixed(2)}`;
+        }
+
         function exportToExcel() {
             if (expenses.length === 0) {
                 alert('No expenses to export.');
                 return;
             }
 
-            const data = expenses.map(exp => ({
-                Date: exp.date,
-                Vendor: exp.vendor,
-                Amount: exp.amount,
-                Category: exp.category,
-                Description: exp.description || '',
-                'Payment Source': exp.paymentSource,
-            }));
+            // Categories eligible for 529 plan (food and textbooks only)
+            const eligible529Categories = ['food', 'textbooks'];
+
+            const data = expenses.map(exp => {
+                const category = exp.category.toLowerCase();
+                const is529Eligible = eligible529Categories.includes(category);
+
+                return {
+                    'DATE': formatExcelDate(exp.date),
+                    'AMT': formatCurrency(exp.amount),
+                    'AMT_529': is529Eligible ? formatCurrency(exp.amount) : '',
+                    'NAME': exp.vendor,
+                    'CATG': category,
+                    'DESC': exp.description || '',
+                    'PYMT SRC': exp.paymentSource,
+                    'TERM': getTerm(exp.date),
+                    'RECEIPT': 'Y',
+                };
+            });
 
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
@@ -880,12 +930,15 @@
 
             // Auto-size columns
             const colWidths = [
-                { wch: 12 }, // Date
-                { wch: 25 }, // Vendor
-                { wch: 10 }, // Amount
-                { wch: 15 }, // Category
-                { wch: 30 }, // Description
-                { wch: 15 }, // Payment Source
+                { wch: 12 },  // DATE
+                { wch: 10 },  // AMT
+                { wch: 10 },  // AMT_529
+                { wch: 25 },  // NAME
+                { wch: 12 },  // CATG
+                { wch: 30 },  // DESC
+                { wch: 14 },  // PYMT SRC
+                { wch: 14 },  // TERM
+                { wch: 8 },   // RECEIPT
             ];
             ws['!cols'] = colWidths;
 
@@ -910,6 +963,10 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function capitalizeCategory(cat) {
+            return cat.charAt(0).toUpperCase() + cat.slice(1);
         }
     </script>
 </body>
