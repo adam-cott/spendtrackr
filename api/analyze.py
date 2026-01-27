@@ -203,13 +203,115 @@ SPECIAL_CAPS = {
     'mc': 'Mc',  # McDonald, McDonalds
 }
 
+# Keywords in vendor names that indicate food establishments
+FOOD_VENDOR_KEYWORDS = {
+    'restaurant', 'cafe', 'café', 'grill', 'kitchen', 'food', 'bagel', 'pizza',
+    'burger', 'taco', 'sushi', 'bakery', 'deli', 'market', 'grocery', 'diner',
+    'bistro', 'eatery', 'cantina', 'pizzeria', 'steakhouse', 'bbq', 'barbecue',
+    'seafood', 'noodle', 'ramen', 'pho', 'thai', 'chinese', 'mexican', 'italian',
+    'indian', 'korean', 'japanese', 'vietnamese', 'mediterranean', 'greek',
+    'wings', 'chicken', 'sandwich', 'sub', 'wrap', 'salad', 'soup', 'buffet',
+    'creamery', 'ice cream', 'frozen yogurt', 'smoothie', 'juice', 'boba',
+    'bubble tea', 'tea house', 'donut', 'doughnut', 'pastry', 'dessert',
+    'breakfast', 'brunch', 'lunch', 'dinner', 'catering', 'food truck',
+    'el salvador', 'los ', 'la ', 'el ', 'taqueria', 'carniceria',
+}
 
-def get_category(vendor: str) -> str:
-    """Get category for a vendor based on the mapping."""
+# Known food vendors that might not have obvious food keywords
+KNOWN_FOOD_VENDORS = {
+    'mcdonalds', 'wendys', 'burger king', 'taco bell', 'subway', 'chick-fil-a',
+    'chickfila', 'chipotle', 'five guys', 'in-n-out', 'arbys', 'popeyes', 'kfc',
+    'papa johns', 'dominos', 'pizza hut', 'little caesars', 'sonic',
+    'jack in the box', 'carls jr', 'hardees', 'del taco', 'panda express',
+    'raising canes', 'wingstop', 'buffalo wild wings', 'zaxbys', 'qdoba',
+    'moes', 'panera', 'jersey mikes', 'jimmy johns', 'firehouse subs',
+    'potbelly', 'noodles', 'pei wei', 'pf changs', 'olive garden', 'applebees',
+    'chilis', 'red lobster', 'outback', 'texas roadhouse', 'cracker barrel',
+    'ihop', 'dennys', 'waffle house', 'golden corral', 'cici', 'fazolis',
+    'boba bee', 'costa vida', 'cafe rio', 'cafe zupas', 'zupas', 'noodles & co',
+    'byu creamery', 'byu dining', 'cougareat', 'cannon center', 'morris center',
+    'jamba', 'jamba juice', 'smoothie king', 'tropical smoothie',
+    'baskin robbins', 'cold stone', 'dairy queen', 'culvers',
+    'in n out', 'shake shack', 'smashburger', 'habit burger', 'fat burger',
+    'wienerschnitzel', 'weinerschnitzel', 'hot dog on a stick',
+}
+
+# Food item keywords to detect in receipt text (indicates food purchase)
+FOOD_ITEM_KEYWORDS = {
+    # Meals and dishes
+    'bagel', 'sandwich', 'burger', 'pizza', 'taco', 'burrito', 'quesadilla',
+    'nachos', 'enchilada', 'fajita', 'salad', 'soup', 'wrap', 'sub',
+    'hotdog', 'hot dog', 'corn dog', 'chicken', 'beef', 'pork', 'steak',
+    'fish', 'shrimp', 'salmon', 'wings', 'nuggets', 'tender', 'strip',
+    'fries', 'tots', 'onion rings', 'mozzarella sticks', 'breadsticks',
+    'pasta', 'spaghetti', 'lasagna', 'ravioli', 'noodles', 'rice', 'fried rice',
+    'egg roll', 'spring roll', 'dumpling', 'gyoza', 'wonton',
+    'sushi', 'sashimi', 'roll', 'teriyaki', 'tempura', 'ramen', 'pho',
+    'curry', 'tikka', 'masala', 'biryani', 'naan', 'samosa',
+    'gyro', 'falafel', 'hummus', 'pita', 'shawarma', 'kebab',
+    # Breakfast items
+    'breakfast', 'pancake', 'waffle', 'french toast', 'eggs', 'bacon',
+    'sausage', 'hash brown', 'hashbrown', 'omelette', 'omelet', 'biscuit',
+    'croissant', 'muffin', 'toast', 'cereal', 'oatmeal', 'yogurt',
+    # Drinks
+    'drink', 'beverage', 'soda', 'pop', 'coke', 'pepsi', 'sprite', 'fanta',
+    'lemonade', 'iced tea', 'sweet tea', 'juice', 'orange juice', 'apple juice',
+    'coffee', 'latte', 'cappuccino', 'espresso', 'mocha', 'americano',
+    'frappuccino', 'frappe', 'macchiato', 'tea', 'chai', 'matcha',
+    'smoothie', 'shake', 'milkshake', 'slushie', 'slurpee', 'icee',
+    'boba', 'bubble tea', 'milk tea',
+    'water', 'sparkling', 'mineral water',
+    # Snacks and sides
+    'snack', 'chips', 'pretzel', 'popcorn', 'crackers', 'nuts', 'trail mix',
+    'candy', 'chocolate', 'cookie', 'brownie', 'cake', 'pie', 'donut',
+    'doughnut', 'pastry', 'danish', 'scone', 'cupcake', 'ice cream',
+    'gelato', 'frozen yogurt', 'sundae', 'cone', 'parfait',
+    'fruit', 'apple', 'banana', 'orange', 'grapes', 'berries',
+    # Generic food terms
+    'meal', 'combo', 'value meal', 'kids meal', 'happy meal', 'entree',
+    'appetizer', 'side', 'dessert', 'treat', 'food', 'eat', 'dine',
+    'order', 'takeout', 'take out', 'to go', 'dine in', 'delivery',
+}
+
+
+def get_category(vendor: str, ocr_text: str = "") -> str:
+    """
+    Get category for a vendor based on mapping, keywords, and receipt contents.
+
+    Checks:
+    1. Known vendor mappings
+    2. Food vendor keywords in vendor name
+    3. Known food vendor names
+    4. Food item keywords in OCR text
+    """
     vendor_lower = vendor.lower()
+    text_lower = ocr_text.lower() if ocr_text else ""
+
+    # First check explicit vendor mappings
     for known_vendor, category in VENDOR_CATEGORIES.items():
         if known_vendor in vendor_lower:
             return category
+
+    # Check if vendor name contains food-related keywords
+    for keyword in FOOD_VENDOR_KEYWORDS:
+        if keyword in vendor_lower:
+            return "food"
+
+    # Check if vendor is a known food establishment
+    for food_vendor in KNOWN_FOOD_VENDORS:
+        if food_vendor in vendor_lower:
+            return "food"
+
+    # Check receipt text for food item keywords (for generic vendors)
+    if text_lower:
+        food_keyword_count = 0
+        for keyword in FOOD_ITEM_KEYWORDS:
+            if keyword in text_lower:
+                food_keyword_count += 1
+                # If we find multiple food keywords, it's likely a food purchase
+                if food_keyword_count >= 2:
+                    return "food"
+
     return "other"
 
 
@@ -438,7 +540,7 @@ def analyze_receipt():
         total = extract_total(text)
         vendor = extract_vendor(text)
         date = extract_date(text)
-        category = get_category(vendor)
+        category = get_category(vendor, text)
 
         return jsonify({
             "success": True,
