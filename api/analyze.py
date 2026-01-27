@@ -15,49 +15,193 @@ app = Flask(__name__)
 # OCR.space API endpoint
 OCR_SPACE_URL = "https://api.ocr.space/parse/image"
 
-# Default vendor to category mapping
+# Default vendor to category mapping (lowercase categories)
 VENDOR_CATEGORIES = {
-    "mcdonald": "Fast Food",
-    "burger king": "Fast Food",
-    "wendy": "Fast Food",
-    "taco bell": "Fast Food",
-    "chick-fil-a": "Fast Food",
-    "subway": "Fast Food",
-    "chipotle": "Fast Food",
-    "shell": "Gas",
-    "exxon": "Gas",
-    "chevron": "Gas",
-    "bp": "Gas",
-    "mobil": "Gas",
-    "speedway": "Gas",
-    "target": "Retail",
-    "walmart": "Retail",
-    "costco": "Retail",
-    "amazon": "Retail",
-    "best buy": "Retail",
-    "kroger": "Groceries",
-    "whole foods": "Groceries",
-    "trader joe": "Groceries",
-    "safeway": "Groceries",
-    "aldi": "Groceries",
-    "publix": "Groceries",
-    "starbucks": "Coffee",
-    "dunkin": "Coffee",
-    "peet": "Coffee",
-    "cvs": "Pharmacy",
-    "walgreens": "Pharmacy",
-    "rite aid": "Pharmacy",
+    "mcdonald": "food",
+    "burger king": "food",
+    "wendy": "food",
+    "taco bell": "food",
+    "chick-fil-a": "food",
+    "subway": "food",
+    "chipotle": "food",
+    "shell": "gas",
+    "exxon": "gas",
+    "chevron": "gas",
+    "bp": "gas",
+    "mobil": "gas",
+    "speedway": "gas",
+    "target": "retail",
+    "walmart": "retail",
+    "costco": "retail",
+    "amazon": "retail",
+    "best buy": "retail",
+    "kroger": "groceries",
+    "whole foods": "groceries",
+    "trader joe": "groceries",
+    "safeway": "groceries",
+    "aldi": "groceries",
+    "publix": "groceries",
+    "starbucks": "coffee",
+    "dunkin": "coffee",
+    "peet": "coffee",
+    "cvs": "pharmacy",
+    "walgreens": "pharmacy",
+    "rite aid": "pharmacy",
 }
 
-# Common vendor names to look for in receipts
-KNOWN_VENDORS = [
-    "McDonald's", "Burger King", "Wendy's", "Taco Bell", "Chick-fil-A",
-    "Subway", "Chipotle", "Shell", "Exxon", "Chevron", "BP", "Mobil",
-    "Speedway", "Target", "Walmart", "Costco", "Amazon", "Best Buy",
-    "Kroger", "Whole Foods", "Trader Joe's", "Safeway", "Aldi", "Publix",
-    "Starbucks", "Dunkin", "Peet's", "CVS", "Walgreens", "Rite Aid",
-    "Home Depot", "Lowe's", "7-Eleven", "Circle K"
-]
+# Known vendor names with correct formatting (key: lowercase for matching, value: display name)
+KNOWN_VENDOR_NAMES = {
+    # BYU
+    "byu": "BYU",
+    "byu campus store": "BYU Campus Store",
+    "byu bookstore": "BYU Bookstore",
+    "byu creamery": "BYU Creamery",
+    "byu dining": "BYU Dining",
+    # Fast Food
+    "mcdonalds": "McDonalds",
+    "mcdonald's": "McDonalds",
+    "burger king": "Burger King",
+    "wendys": "Wendys",
+    "wendy's": "Wendys",
+    "taco bell": "Taco Bell",
+    "chick-fil-a": "Chick-fil-A",
+    "chickfila": "Chick-fil-A",
+    "subway": "Subway",
+    "chipotle": "Chipotle",
+    "five guys": "Five Guys",
+    "in-n-out": "In-N-Out",
+    "arbys": "Arbys",
+    "arby's": "Arbys",
+    "popeyes": "Popeyes",
+    "kfc": "KFC",
+    "papa johns": "Papa Johns",
+    "dominos": "Dominos",
+    "domino's": "Dominos",
+    "pizza hut": "Pizza Hut",
+    "little caesars": "Little Caesars",
+    "sonic": "Sonic",
+    "jack in the box": "Jack in the Box",
+    "carls jr": "Carls Jr",
+    "carl's jr": "Carls Jr",
+    "hardees": "Hardees",
+    "hardee's": "Hardees",
+    "del taco": "Del Taco",
+    "panda express": "Panda Express",
+    "raising canes": "Raising Canes",
+    "raising cane's": "Raising Canes",
+    "wingstop": "Wingstop",
+    "buffalo wild wings": "Buffalo Wild Wings",
+    "zaxbys": "Zaxbys",
+    "zaxby's": "Zaxbys",
+    # Gas Stations
+    "shell": "Shell",
+    "exxon": "Exxon",
+    "chevron": "Chevron",
+    "bp": "BP",
+    "mobil": "Mobil",
+    "speedway": "Speedway",
+    "76": "76",
+    "phillips 66": "Phillips 66",
+    "conoco": "Conoco",
+    "marathon": "Marathon",
+    "valero": "Valero",
+    "sinclair": "Sinclair",
+    "circle k": "Circle K",
+    "7-eleven": "7-Eleven",
+    "7 eleven": "7-Eleven",
+    "maverik": "Maverik",
+    # Retail
+    "target": "Target",
+    "walmart": "Walmart",
+    "costco": "Costco",
+    "amazon": "Amazon",
+    "best buy": "Best Buy",
+    "home depot": "Home Depot",
+    "lowes": "Lowes",
+    "lowe's": "Lowes",
+    "ikea": "IKEA",
+    "dollar tree": "Dollar Tree",
+    "dollar general": "Dollar General",
+    "family dollar": "Family Dollar",
+    "big lots": "Big Lots",
+    "tj maxx": "TJ Maxx",
+    "tjmaxx": "TJ Maxx",
+    "marshalls": "Marshalls",
+    "ross": "Ross",
+    "kohls": "Kohls",
+    "kohl's": "Kohls",
+    "jcpenney": "JCPenney",
+    "macys": "Macys",
+    "macy's": "Macys",
+    "nordstrom": "Nordstrom",
+    "sephora": "Sephora",
+    "ulta": "Ulta",
+    "bath & body works": "Bath and Body Works",
+    "bed bath & beyond": "Bed Bath and Beyond",
+    "office depot": "Office Depot",
+    "staples": "Staples",
+    "michaels": "Michaels",
+    "hobby lobby": "Hobby Lobby",
+    "joann": "Joann",
+    "jo-ann": "Joann",
+    "ace hardware": "Ace Hardware",
+    "autozone": "AutoZone",
+    "oreilly": "OReilly",
+    "o'reilly": "OReilly",
+    "advance auto": "Advance Auto",
+    # Groceries
+    "kroger": "Kroger",
+    "whole foods": "Whole Foods",
+    "trader joes": "Trader Joes",
+    "trader joe's": "Trader Joes",
+    "safeway": "Safeway",
+    "aldi": "Aldi",
+    "publix": "Publix",
+    "albertsons": "Albertsons",
+    "vons": "Vons",
+    "ralphs": "Ralphs",
+    "food lion": "Food Lion",
+    "giant": "Giant",
+    "stop & shop": "Stop and Shop",
+    "wegmans": "Wegmans",
+    "heb": "HEB",
+    "h-e-b": "HEB",
+    "meijer": "Meijer",
+    "winco": "WinCo",
+    "food 4 less": "Food 4 Less",
+    "grocery outlet": "Grocery Outlet",
+    "sprouts": "Sprouts",
+    "smiths": "Smiths",
+    "smith's": "Smiths",
+    "frys": "Frys",
+    "fry's": "Frys",
+    "harmons": "Harmons",
+    "maceys": "Maceys",
+    # Coffee
+    "starbucks": "Starbucks",
+    "dunkin": "Dunkin",
+    "dunkin donuts": "Dunkin Donuts",
+    "peets": "Peets",
+    "peet's": "Peets",
+    "dutch bros": "Dutch Bros",
+    "swig": "Swig",
+    "sodalicious": "Sodalicious",
+    # Pharmacy
+    "cvs": "CVS",
+    "walgreens": "Walgreens",
+    "rite aid": "Rite Aid",
+}
+
+# Words that should stay lowercase in titles (unless first word)
+LOWERCASE_WORDS = {'and', 'the', 'of', 'at', 'in', 'on', 'for', 'to', 'a', 'an'}
+
+# Words/acronyms that should always be uppercase
+UPPERCASE_WORDS = {'byu', 'cvs', 'bp', 'kfc', 'heb', 'ikea', 'atm', 'usa'}
+
+# Special capitalization patterns (prefix: replacement)
+SPECIAL_CAPS = {
+    'mc': 'Mc',  # McDonald, McDonalds
+}
 
 
 def get_category(vendor: str) -> str:
@@ -66,7 +210,68 @@ def get_category(vendor: str) -> str:
     for known_vendor, category in VENDOR_CATEGORIES.items():
         if known_vendor in vendor_lower:
             return category
-    return "Other"
+    return "other"
+
+
+def standardize_vendor_name(raw_name: str) -> str:
+    """
+    Standardize vendor name with proper capitalization.
+
+    - Removes apostrophes
+    - Applies title case with smart exceptions
+    - Handles acronyms (BYU, CVS, etc.)
+    - Handles special patterns (Mc prefix, etc.)
+    """
+    if not raw_name:
+        return "Unknown Vendor"
+
+    # Remove apostrophes
+    name = raw_name.replace("'", "").replace("'", "")
+
+    # Check for exact match in known vendors (case-insensitive)
+    name_lower = name.lower().strip()
+    if name_lower in KNOWN_VENDOR_NAMES:
+        return KNOWN_VENDOR_NAMES[name_lower]
+
+    # Check for partial match with known vendors
+    for known_key, known_name in KNOWN_VENDOR_NAMES.items():
+        if known_key in name_lower:
+            return known_name
+
+    # Apply smart title case
+    words = name.split()
+    result_words = []
+
+    for i, word in enumerate(words):
+        word_lower = word.lower()
+
+        # Check if it's an uppercase acronym
+        if word_lower in UPPERCASE_WORDS:
+            result_words.append(word.upper())
+            continue
+
+        # Check for special capitalization patterns (like Mc)
+        handled = False
+        for prefix, replacement in SPECIAL_CAPS.items():
+            if word_lower.startswith(prefix) and len(word_lower) > len(prefix):
+                # Apply pattern: McDonalds, McCafe, etc.
+                rest = word[len(prefix):]
+                result_words.append(replacement + rest.capitalize())
+                handled = True
+                break
+
+        if handled:
+            continue
+
+        # Lowercase words (unless first word)
+        if i > 0 and word_lower in LOWERCASE_WORDS:
+            result_words.append(word_lower)
+            continue
+
+        # Default: capitalize first letter
+        result_words.append(word.capitalize())
+
+    return ' '.join(result_words)
 
 
 def extract_total(text: str) -> float | None:
@@ -148,22 +353,27 @@ def extract_vendor(text: str) -> str:
         if not line_clean:
             continue
 
-        # Check against known vendors
-        for vendor in KNOWN_VENDORS:
-            if vendor.lower() in line_clean.lower():
-                return vendor
+        # Remove apostrophes for matching
+        line_normalized = line_clean.lower().replace("'", "").replace("'", "")
 
-        # Check category mapping
+        # Check against known vendor names dictionary
+        for known_key in KNOWN_VENDOR_NAMES.keys():
+            if known_key.replace("'", "") in line_normalized:
+                return KNOWN_VENDOR_NAMES[known_key]
+
+        # Check category mapping for partial matches
         for vendor_key in VENDOR_CATEGORIES.keys():
-            if vendor_key in line_clean.lower():
-                return line_clean[:50]
+            if vendor_key in line_normalized:
+                # Found a category match, standardize the line
+                return standardize_vendor_name(line_clean[:50])
 
     # Fallback: use first non-empty line that looks like a name
     for line in lines[:5]:
         line_clean = line.strip()
         if line_clean and len(line_clean) > 3:
             if not re.match(r'^[\d\s\-\/\.\$]+$', line_clean):
-                return line_clean[:50]
+                # Standardize the extracted name
+                return standardize_vendor_name(line_clean[:50])
 
     return "Unknown Vendor"
 
