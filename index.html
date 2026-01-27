@@ -137,6 +137,7 @@
 
         /* Upload Area */
         .upload-area {
+            display: block;
             border: 2px dashed var(--border-medium);
             border-radius: var(--radius-lg);
             padding: 56px 32px;
@@ -721,7 +722,7 @@
                 <span class="card-icon">&#128247;</span>
                 <h2>Upload Receipt</h2>
             </div>
-            <div class="upload-area" id="uploadArea">
+            <label for="fileInput" class="upload-area" id="uploadArea">
                 <div id="uploadPlaceholder">
                     <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
@@ -730,7 +731,7 @@
                     <div class="upload-hint">Supports JPG and PNG images</div>
                 </div>
                 <img id="previewImage" class="hidden" alt="Receipt preview">
-            </div>
+            </label>
             <input type="file" id="fileInput" accept="image/jpeg,image/png">
             <button id="analyzeBtn" class="btn-brown hidden" style="margin-top: 24px;">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -935,10 +936,7 @@
         console.log('🔧 Debug: uploadArea element:', uploadArea);
         console.log('🔧 Debug: fileInput element:', fileInput);
 
-        uploadArea.addEventListener('click', (e) => {
-            console.log('🔧 Debug: Upload area clicked!', e.target);
-            fileInput.click();
-        });
+        // Label handles click natively via for="fileInput", so we only need drag/drop
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
