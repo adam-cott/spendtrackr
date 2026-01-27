@@ -896,8 +896,17 @@
         const SUPABASE_URL = 'https://gqdagvmiyeyboqzolfsc.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxZGFndm1peWV5Ym9xem9sZnNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NTA4NzQsImV4cCI6MjA4NTEyNjg3NH0.9WjZCAjn4B_VhniQUppyxQDX57_NerKHyt4hwYiqmpg';
 
+        console.log('🔧 Debug: Script starting...');
+        console.log('🔧 Debug: Supabase library loaded?', typeof window.supabase !== 'undefined');
+
         // Initialize Supabase client
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('✅ Debug: Supabase client created successfully');
+        } catch (e) {
+            console.error('❌ Debug: Failed to create Supabase client:', e);
+        }
 
         // State
         let currentImageData = null;
@@ -922,7 +931,14 @@
         loadExpenses();
 
         // Event Listeners
-        uploadArea.addEventListener('click', () => fileInput.click());
+        console.log('🔧 Debug: Setting up event listeners...');
+        console.log('🔧 Debug: uploadArea element:', uploadArea);
+        console.log('🔧 Debug: fileInput element:', fileInput);
+
+        uploadArea.addEventListener('click', (e) => {
+            console.log('🔧 Debug: Upload area clicked!', e.target);
+            fileInput.click();
+        });
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
@@ -932,25 +948,34 @@
         });
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
+            console.log('🔧 Debug: File dropped!');
             uploadArea.classList.remove('dragover');
             const file = e.dataTransfer.files[0];
             if (file) handleFile(file);
         });
         fileInput.addEventListener('change', (e) => {
+            console.log('🔧 Debug: File input changed!', e.target.files);
             const file = e.target.files[0];
             if (file) handleFile(file);
         });
         analyzeBtn.addEventListener('click', analyzeReceipt);
         expenseForm.addEventListener('submit', saveExpense);
 
+        console.log('✅ Debug: All event listeners set up');
+
         function handleFile(file) {
+            console.log('🔧 Debug: handleFile called with:', file);
+            console.log('🔧 Debug: File type:', file.type);
+
             if (!file.type.match(/^image\/(jpeg|png)$/)) {
+                console.log('❌ Debug: Invalid file type');
                 showError('Please upload a JPG or PNG image.');
                 return;
             }
 
             const reader = new FileReader();
             reader.onload = (e) => {
+                console.log('✅ Debug: File read successfully');
                 currentImageData = e.target.result;
                 currentMediaType = file.type;
                 previewImage.src = currentImageData;
@@ -959,6 +984,10 @@
                 uploadArea.classList.add('has-image');
                 analyzeBtn.classList.remove('hidden');
                 hideError();
+                console.log('✅ Debug: Image preview updated, analyze button shown');
+            };
+            reader.onerror = (e) => {
+                console.error('❌ Debug: FileReader error:', e);
             };
             reader.readAsDataURL(file);
         }
@@ -1069,23 +1098,31 @@
         }
 
         async function loadExpenses() {
+            console.log('🔧 Debug: loadExpenses called...');
             try {
+                console.log('🔧 Debug: Querying Supabase receipts table...');
                 const { data, error } = await supabase
                     .from('receipts')
                     .select('*')
                     .order('date', { ascending: false });
 
-                if (error) throw error;
+                if (error) {
+                    console.error('❌ Debug: Supabase error:', error);
+                    throw error;
+                }
+
+                console.log('✅ Debug: Supabase query successful, rows:', data?.length || 0);
+                console.log('🔧 Debug: Data:', data);
 
                 expenses = data || [];
                 isLoading = false;
                 renderExpenseHistory();
             } catch (error) {
-                console.error('Error loading expenses:', error);
+                console.error('❌ Debug: loadExpenses error:', error);
                 isLoading = false;
                 expenses = [];
                 renderExpenseHistory();
-                showError('Failed to load expenses from database.');
+                showError('Failed to load expenses from database. Check console for details.');
             }
         }
 
