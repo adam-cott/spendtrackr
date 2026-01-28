@@ -10,12 +10,16 @@ Required environment variables:
 
 import os
 import sys
+import re
 import smtplib
 import base64
 import traceback
+import uuid
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
+from email.utils import formatdate, formataddr
 
 from flask import Flask, request, jsonify
 
@@ -44,6 +48,12 @@ def format_date_no_leading_zeros(date_str: str) -> str:
     except (ValueError, AttributeError) as e:
         log(f"Date formatting error: {e}")
     return date_str
+
+
+def is_valid_email(email: str) -> bool:
+    """Validate email address format."""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
 
 
 def send_receipt_email(
@@ -79,18 +89,42 @@ def send_receipt_email(
         debug_info['steps_completed'].append('format_subject')
         log(f"  Subject: {subject}")
 
-        # Step 2: Create email message
-        log("Step 2: Creating email message...")
-        msg = MIMEMultipart()
-        msg['From'] = gmail_address
+        # Step 2: Validate email addresses
+        log("Step 2: Validating email addresses...")
+        if not is_valid_email(gmail_address):
+            raise ValueError(f"Invalid sender email format: {gmail_address}")
+        if not is_valid_email(recipient_email):
+            raise ValueError(f"Invalid recipient email format: {recipient_email}")
+        debug_info['steps_completed'].append('validate_emails')
+        log(f"  Emails validated: {gmail_address} -> {recipient_email}")
+
+        # Step 3: Create email message with proper headers
+        log("Step 3: Creating email message with Gmail-compliant headers...")
+        msg = MIMEMultipart('mixed')
+
+        # Required headers for Gmail compliance
+        msg['From'] = formataddr(('SpendTrackr', gmail_address))
         msg['To'] = recipient_email
         msg['Subject'] = subject
-        msg.attach(MIMEText('', 'plain'))
-        debug_info['steps_completed'].append('create_message')
-        log("  Message created successfully")
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = f"<{uuid.uuid4()}@spendtrackr.app>"
+        msg['MIME-Version'] = '1.0'
+        msg['X-Mailer'] = 'SpendTrackr/1.0'
 
-        # Step 3: Process image data
-        log("Step 3: Processing image data...")
+        # Add a minimal text body (helps avoid spam filters)
+        body_text = f"Receipt: {formatted_amount} on {formatted_date}"
+        msg.attach(MIMEText(body_text, 'plain', 'utf-8'))
+
+        debug_info['steps_completed'].append('create_message')
+        debug_info['message_id'] = msg['Message-ID']
+        log("  Message created with headers:")
+        log(f"    From: {msg['From']}")
+        log(f"    To: {msg['To']}")
+        log(f"    Subject: {msg['Subject']}")
+        log(f"    Message-ID: {msg['Message-ID']}")
+
+        # Step 4: Process image data
+        log("Step 4: Processing image data...")
         log(f"  Image data length: {len(image_data)} chars")
         log(f"  Image data starts with: {image_data[:50]}...")
 
@@ -108,8 +142,8 @@ def send_receipt_email(
         debug_info['steps_completed'].append('extract_base64')
         log(f"  Base64 data length: {len(image_data)} chars")
 
-        # Step 4: Decode base64
-        log("Step 4: Decoding base64 image...")
+        # Step 5: Decode base64
+        log("Step 5: Decoding base64 image...")
         try:
             image_bytes = base64.b64decode(image_data)
             debug_info['image_bytes_size'] = len(image_bytes)
@@ -120,8 +154,16 @@ def send_receipt_email(
             log(f"  First 100 chars of base64: {image_data[:100]}")
             raise ValueError(f"Failed to decode base64 image: {decode_err}")
 
-        # Step 5: Create image attachment
-        log("Step 5: Creating image attachment...")
+        # Step 6: Validate attachment size (Gmail limit is 25MB, but keep under 10MB for reliability)
+        log("Step 6: Validating attachment size...")
+        max_attachment_size = 10 * 1024 * 1024  # 10MB
+        if len(image_bytes) > max_attachment_size:
+            raise ValueError(f"Attachment too large: {len(image_bytes) / 1024 / 1024:.1f}MB (max 10MB)")
+        debug_info['steps_completed'].append('validate_size')
+        log(f"  Attachment size OK: {len(image_bytes) / 1024:.1f} KB")
+
+        # Step 7: Create image attachment with proper headers
+        log("Step 7: Creating image attachment...")
         try:
             image_attachment = MIMEImage(image_bytes, _subtype='jpeg')
             filename = f"receipt_{formatted_date.replace('/', '-')}.jpg"
@@ -130,16 +172,18 @@ def send_receipt_email(
                 'attachment',
                 filename=filename
             )
+            image_attachment.add_header('Content-Transfer-Encoding', 'base64')
             msg.attach(image_attachment)
             debug_info['attachment_filename'] = filename
+            debug_info['attachment_size_kb'] = round(len(image_bytes) / 1024, 1)
             debug_info['steps_completed'].append('create_attachment')
-            log(f"  Attachment created: {filename}")
+            log(f"  Attachment created: {filename} ({len(image_bytes) / 1024:.1f} KB)")
         except Exception as attach_err:
             log(f"  Attachment error: {attach_err}")
             raise ValueError(f"Failed to create image attachment: {attach_err}")
 
-        # Step 6: Connect to Gmail SMTP
-        log("Step 6: Connecting to Gmail SMTP...")
+        # Step 8: Connect to Gmail SMTP
+        log("Step 8: Connecting to Gmail SMTP...")
         log(f"  Server: {GMAIL_SMTP_SERVER}:{GMAIL_SMTP_PORT}")
         try:
             server = smtplib.SMTP(GMAIL_SMTP_SERVER, GMAIL_SMTP_PORT, timeout=30)
@@ -150,14 +194,14 @@ def send_receipt_email(
             raise ConnectionError(f"Failed to connect to Gmail SMTP: {connect_err}")
 
         try:
-            # Step 7: Start TLS
-            log("Step 7: Starting TLS encryption...")
+            # Step 9: Start TLS
+            log("Step 9: Starting TLS encryption...")
             server.starttls()
             debug_info['steps_completed'].append('start_tls')
             log("  TLS started successfully")
 
-            # Step 8: Login to Gmail
-            log("Step 8: Logging in to Gmail...")
+            # Step 10: Login to Gmail
+            log("Step 10: Logging in to Gmail...")
             log(f"  Gmail address: {gmail_address}")
             log(f"  App password length: {len(gmail_app_password)} chars")
             log(f"  App password (redacted): {gmail_app_password[:4]}...{gmail_app_password[-4:] if len(gmail_app_password) > 8 else '****'}")
@@ -172,8 +216,8 @@ def send_receipt_email(
                 log(f"  Error message: {auth_err.smtp_error}")
                 raise auth_err
 
-            # Step 9: Send email
-            log("Step 9: Sending email...")
+            # Step 11: Send email
+            log("Step 11: Sending email...")
             server.send_message(msg)
             debug_info['steps_completed'].append('send_message')
             log("  Email sent successfully!")
