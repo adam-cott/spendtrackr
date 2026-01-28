@@ -897,16 +897,44 @@
         const SUPABASE_URL = 'https://gqdagvmiyeyboqzolfsc.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxZGFndm1peWV5Ym9xem9sZnNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NTA4NzQsImV4cCI6MjA4NTEyNjg3NH0.9WjZCAjn4B_VhniQUppyxQDX57_NerKHyt4hwYiqmpg';
 
-        console.log('🔧 Debug: Script starting...');
-        console.log('🔧 Debug: Supabase library loaded?', typeof window.supabase !== 'undefined');
+        // Global error handler to catch any uncaught errors
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error('='.repeat(50));
+            console.error('🚨 UNCAUGHT ERROR:');
+            console.error('   - Message:', message);
+            console.error('   - Source:', source);
+            console.error('   - Line:', lineno, 'Col:', colno);
+            console.error('   - Error object:', error);
+            console.error('='.repeat(50));
+            return false;
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('='.repeat(50));
+            console.error('🚨 UNHANDLED PROMISE REJECTION:');
+            console.error('   - Reason:', event.reason);
+            console.error('='.repeat(50));
+        });
+
+        console.log('='.repeat(50));
+        console.log('🚀 SpendTrackr Debug Mode');
+        console.log('='.repeat(50));
+        console.log('📍 Step 1: Script starting...');
+        console.log('📍 Step 2: Checking Supabase library...');
+        console.log('   - window.supabase exists?', typeof window.supabase !== 'undefined');
+        console.log('   - window.supabase value:', window.supabase);
 
         // Initialize Supabase client
         let supabase;
         try {
+            if (!window.supabase) {
+                throw new Error('Supabase library not loaded from CDN');
+            }
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log('✅ Debug: Supabase client created successfully');
+            console.log('✅ Step 3: Supabase client created successfully');
         } catch (e) {
-            console.error('❌ Debug: Failed to create Supabase client:', e);
+            console.error('❌ Step 3 FAILED: Supabase client creation error:', e);
+            console.error('   This may prevent the app from working properly');
         }
 
         // State
@@ -916,6 +944,7 @@
         let isLoading = true;
 
         // DOM Elements
+        console.log('📍 Step 4: Getting DOM elements...');
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const previewImage = document.getElementById('previewImage');
@@ -928,65 +957,171 @@
         const expenseForm = document.getElementById('expenseForm');
         const successToast = document.getElementById('successToast');
 
-        // Initialize - load expenses from Supabase
-        loadExpenses();
+        // Verify critical DOM elements
+        const domCheck = {
+            uploadArea: !!uploadArea,
+            fileInput: !!fileInput,
+            previewImage: !!previewImage,
+            uploadPlaceholder: !!uploadPlaceholder,
+            analyzeBtn: !!analyzeBtn
+        };
+        console.log('   - DOM elements found:', domCheck);
+
+        if (!fileInput) {
+            console.error('❌ CRITICAL: fileInput element not found! File upload will not work.');
+        } else {
+            console.log('   - fileInput.type:', fileInput.type);
+            console.log('   - fileInput.accept:', fileInput.accept);
+            console.log('   - fileInput.id:', fileInput.id);
+        }
 
         // Event Listeners
-        console.log('🔧 Debug: Setting up event listeners...');
-        console.log('🔧 Debug: uploadArea element:', uploadArea);
-        console.log('🔧 Debug: fileInput element:', fileInput);
+        console.log('📍 Step 5: Setting up event listeners...');
 
-        // Label handles click natively via for="fileInput", so we only need drag/drop
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            console.log('🔧 Debug: File dropped!');
-            uploadArea.classList.remove('dragover');
-            const file = e.dataTransfer.files[0];
-            if (file) handleFile(file);
-        });
-        fileInput.addEventListener('change', (e) => {
-            console.log('🔧 Debug: File input changed!', e.target.files);
-            const file = e.target.files[0];
-            if (file) handleFile(file);
-        });
-        analyzeBtn.addEventListener('click', analyzeReceipt);
-        expenseForm.addEventListener('submit', saveExpense);
+        try {
+            // Label handles click natively via for="fileInput", so we only need drag/drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            console.log('   - dragover listener added');
 
-        console.log('✅ Debug: All event listeners set up');
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            console.log('   - dragleave listener added');
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                console.log('📂 DROP EVENT: File dropped!');
+                uploadArea.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                console.log('   - Dropped file:', file);
+                if (file) handleFile(file);
+            });
+            console.log('   - drop listener added');
+
+            // THIS IS THE CRITICAL LISTENER FOR FILE SELECTION
+            fileInput.addEventListener('change', (e) => {
+                console.log('='.repeat(50));
+                console.log('📂 FILE INPUT CHANGE EVENT FIRED!');
+                console.log('   - Event:', e);
+                console.log('   - Event type:', e.type);
+                console.log('   - Target:', e.target);
+                console.log('   - Files array:', e.target.files);
+                console.log('   - Files length:', e.target.files ? e.target.files.length : 'N/A');
+
+                const file = e.target.files[0];
+                console.log('   - Selected file:', file);
+
+                if (file) {
+                    console.log('   - File name:', file.name);
+                    console.log('   - File type:', file.type);
+                    console.log('   - File size:', file.size, 'bytes');
+                    handleFile(file);
+                } else {
+                    console.log('⚠️ No file in selection (user may have cancelled)');
+                }
+                console.log('='.repeat(50));
+            });
+            console.log('   - ✅ change listener added to fileInput');
+
+            // Also listen for click on fileInput to verify it's being triggered
+            fileInput.addEventListener('click', (e) => {
+                console.log('🖱️ FILE INPUT CLICK EVENT - File picker should open now');
+                // Reset value to allow selecting the same file again
+                // (change event doesn't fire if same file is selected)
+                e.target.value = '';
+            });
+            console.log('   - ✅ click listener added to fileInput (for same-file fix)');
+
+            analyzeBtn.addEventListener('click', analyzeReceipt);
+            console.log('   - analyze button listener added');
+
+            expenseForm.addEventListener('submit', saveExpense);
+            console.log('   - form submit listener added');
+
+            console.log('✅ Step 5 COMPLETE: All event listeners set up successfully');
+
+        } catch (listenerError) {
+            console.error('❌ Step 5 FAILED: Error setting up event listeners:', listenerError);
+        }
+
+        // Initialize - load expenses from Supabase
+        console.log('📍 Step 6: Loading expenses from Supabase...');
+        loadExpenses();
 
         function handleFile(file) {
-            console.log('🔧 Debug: handleFile called with:', file);
-            console.log('🔧 Debug: File type:', file.type);
+            console.log('='.repeat(50));
+            console.log('📷 handleFile() CALLED');
+            console.log('   - File object:', file);
+            console.log('   - File name:', file?.name);
+            console.log('   - File type:', file?.type);
+            console.log('   - File size:', file?.size, 'bytes');
+            console.log('='.repeat(50));
+
+            if (!file) {
+                console.error('❌ handleFile: No file provided!');
+                return;
+            }
 
             if (!file.type.match(/^image\/(jpeg|png)$/)) {
-                console.log('❌ Debug: Invalid file type');
+                console.log('❌ handleFile: Invalid file type:', file.type);
+                console.log('   - Expected: image/jpeg or image/png');
                 showError('Please upload a JPG or PNG image.');
                 return;
             }
 
+            console.log('✅ handleFile: File type is valid, creating FileReader...');
             const reader = new FileReader();
+
+            reader.onloadstart = () => {
+                console.log('📖 FileReader: onloadstart - Reading file...');
+            };
+
+            reader.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    console.log('📖 FileReader: onprogress -', percent + '%');
+                }
+            };
+
             reader.onload = (e) => {
-                console.log('✅ Debug: File read successfully');
+                console.log('✅ FileReader: onload - File read successfully!');
+                console.log('   - Result length:', e.target.result?.length || 0, 'characters');
+                console.log('   - Result preview:', e.target.result?.substring(0, 50) + '...');
+
                 currentImageData = e.target.result;
                 currentMediaType = file.type;
+
+                console.log('   - Setting preview image src...');
                 previewImage.src = currentImageData;
+
+                console.log('   - Updating UI classes...');
                 previewImage.classList.remove('hidden');
                 uploadPlaceholder.classList.add('hidden');
                 uploadArea.classList.add('has-image');
                 analyzeBtn.classList.remove('hidden');
+
                 hideError();
-                console.log('✅ Debug: Image preview updated, analyze button shown');
+
+                console.log('✅ handleFile COMPLETE: Image preview should now be visible');
+                console.log('   - previewImage.hidden:', previewImage.classList.contains('hidden'));
+                console.log('   - analyzeBtn.hidden:', analyzeBtn.classList.contains('hidden'));
             };
+
             reader.onerror = (e) => {
-                console.error('❌ Debug: FileReader error:', e);
+                console.error('❌ FileReader: onerror - Failed to read file!');
+                console.error('   - Error:', reader.error);
+                console.error('   - Event:', e);
+                showError('Failed to read the file. Please try again.');
             };
+
+            reader.onabort = () => {
+                console.log('⚠️ FileReader: onabort - File reading was aborted');
+            };
+
+            console.log('📖 FileReader: Starting readAsDataURL...');
             reader.readAsDataURL(file);
         }
 
@@ -1313,6 +1448,82 @@
         function capitalizeCategory(cat) {
             return cat.charAt(0).toUpperCase() + cat.slice(1);
         }
+
+        // Debug utilities - can be called from browser console
+        window.debugSpendTrackr = {
+            // Check the current state of all elements
+            checkState: function() {
+                console.log('='.repeat(50));
+                console.log('🔍 SpendTrackr Debug State Check');
+                console.log('='.repeat(50));
+                console.log('DOM Elements:');
+                console.log('   - uploadArea:', !!uploadArea, uploadArea);
+                console.log('   - fileInput:', !!fileInput, fileInput);
+                console.log('   - previewImage:', !!previewImage, previewImage);
+                console.log('   - analyzeBtn:', !!analyzeBtn, analyzeBtn);
+                console.log('');
+                console.log('State Variables:');
+                console.log('   - currentImageData:', currentImageData ? 'SET (' + currentImageData.length + ' chars)' : 'NULL');
+                console.log('   - currentMediaType:', currentMediaType);
+                console.log('   - expenses:', expenses.length, 'items');
+                console.log('   - isLoading:', isLoading);
+                console.log('');
+                console.log('Supabase:');
+                console.log('   - supabase client:', !!supabase);
+                console.log('='.repeat(50));
+            },
+
+            // Manually trigger file input click
+            triggerFileInput: function() {
+                console.log('🖱️ Manually triggering fileInput.click()...');
+                fileInput.click();
+            },
+
+            // Test with a fake file (for debugging)
+            testWithFakeImage: function() {
+                console.log('🧪 Testing with a 1x1 red PNG...');
+                // Create a minimal valid PNG (1x1 red pixel)
+                const canvas = document.createElement('canvas');
+                canvas.width = 1;
+                canvas.height = 1;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'red';
+                ctx.fillRect(0, 0, 1, 1);
+
+                canvas.toBlob(function(blob) {
+                    const file = new File([blob], 'test.png', { type: 'image/png' });
+                    console.log('   - Created test file:', file);
+                    handleFile(file);
+                }, 'image/png');
+            },
+
+            // Check if event listeners are attached
+            checkListeners: function() {
+                console.log('🔍 Checking event listeners...');
+                console.log('   Note: Cannot directly inspect listeners, but we can verify elements exist');
+                console.log('   - fileInput exists:', !!fileInput);
+                console.log('   - fileInput is HTMLInputElement:', fileInput instanceof HTMLInputElement);
+                console.log('   - fileInput type:', fileInput?.type);
+
+                // Try to get event listeners (Chrome DevTools feature)
+                if (typeof getEventListeners === 'function') {
+                    console.log('   - fileInput listeners:', getEventListeners(fileInput));
+                } else {
+                    console.log('   - (Use Chrome DevTools: getEventListeners(document.getElementById("fileInput")))');
+                }
+            }
+        };
+
+        // Final initialization check
+        console.log('='.repeat(50));
+        console.log('✅ SpendTrackr initialization complete!');
+        console.log('');
+        console.log('🔧 Debug commands available in console:');
+        console.log('   debugSpendTrackr.checkState()     - Check current state');
+        console.log('   debugSpendTrackr.triggerFileInput() - Manually trigger file picker');
+        console.log('   debugSpendTrackr.testWithFakeImage() - Test with a fake image');
+        console.log('   debugSpendTrackr.checkListeners()  - Check event listeners');
+        console.log('='.repeat(50));
     </script>
 </body>
 
