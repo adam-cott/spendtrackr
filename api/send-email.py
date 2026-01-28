@@ -9,8 +9,10 @@ Required environment variables:
 """
 
 import os
+import sys
 import smtplib
 import base64
+import traceback
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
@@ -24,6 +26,11 @@ GMAIL_SMTP_SERVER = "smtp.gmail.com"
 GMAIL_SMTP_PORT = 587
 
 
+def log(message: str):
+    """Log to stderr for Vercel serverless function logs."""
+    print(f"[send-email] {message}", file=sys.stderr)
+
+
 def format_date_no_leading_zeros(date_str: str) -> str:
     """
     Convert date from YYYY-MM-DD to M/D/YYYY format (no leading zeros).
@@ -33,10 +40,9 @@ def format_date_no_leading_zeros(date_str: str) -> str:
         parts = date_str.split('-')
         if len(parts) == 3:
             year, month, day = parts
-            # Remove leading zeros by converting to int then back to string
             return f"{int(month)}/{int(day)}/{year}"
-    except (ValueError, AttributeError):
-        pass
+    except (ValueError, AttributeError) as e:
+        log(f"Date formatting error: {e}")
     return date_str
 
 
@@ -50,122 +56,274 @@ def send_receipt_email(
 ) -> dict:
     """
     Send email with receipt attachment.
-
-    Args:
-        recipient_email: Email address to send to
-        amount: Receipt amount (e.g., 2.67)
-        date: Date in YYYY-MM-DD format
-        image_data: Base64 encoded image (with or without data URL prefix)
-        gmail_address: Sender's Gmail address
-        gmail_app_password: Gmail App Password
-
-    Returns:
-        dict with 'success' and optional 'error' keys
+    Returns dict with 'success', 'error', and 'debug' keys.
     """
+    debug_info = {
+        'steps_completed': [],
+        'recipient': recipient_email,
+        'sender': gmail_address,
+        'amount': amount,
+        'date': date,
+        'image_data_length': len(image_data) if image_data else 0,
+    }
+
     try:
-        # Format subject line: $Amount   Date (3 spaces between)
+        # Step 1: Format subject line
+        log("Step 1: Formatting subject line...")
         formatted_amount = f"${amount:.2f}"
         formatted_date = format_date_no_leading_zeros(date)
-        subject = f"{formatted_amount}   {formatted_date}"
+        # THREE spaces between amount and date (required format)
+        three_spaces = "   "
+        subject = f"{formatted_amount}{three_spaces}{formatted_date}"
+        debug_info['subject'] = subject
+        debug_info['steps_completed'].append('format_subject')
+        log(f"  Subject: {subject}")
 
-        # Create message
+        # Step 2: Create email message
+        log("Step 2: Creating email message...")
         msg = MIMEMultipart()
         msg['From'] = gmail_address
         msg['To'] = recipient_email
         msg['Subject'] = subject
-
-        # Empty body (as requested)
         msg.attach(MIMEText('', 'plain'))
+        debug_info['steps_completed'].append('create_message')
+        log("  Message created successfully")
 
-        # Process image data
-        # Remove data URL prefix if present
-        if ',' in image_data:
-            image_data = image_data.split(',', 1)[1]
+        # Step 3: Process image data
+        log("Step 3: Processing image data...")
+        log(f"  Image data length: {len(image_data)} chars")
+        log(f"  Image data starts with: {image_data[:50]}...")
 
-        # Decode base64 image
-        image_bytes = base64.b64decode(image_data)
+        # Check if it's a data URL
+        if image_data.startswith('data:'):
+            log("  Detected data URL format, extracting base64...")
+            if ',' in image_data:
+                header, base64_data = image_data.split(',', 1)
+                log(f"  Data URL header: {header}")
+                image_data = base64_data
+            else:
+                raise ValueError("Invalid data URL format - no comma found")
 
-        # Attach image
-        image_attachment = MIMEImage(image_bytes, _subtype='jpeg')
-        image_attachment.add_header(
-            'Content-Disposition',
-            'attachment',
-            filename=f"receipt_{formatted_date.replace('/', '-')}.jpg"
-        )
-        msg.attach(image_attachment)
+        debug_info['base64_length'] = len(image_data)
+        debug_info['steps_completed'].append('extract_base64')
+        log(f"  Base64 data length: {len(image_data)} chars")
 
-        # Send email via Gmail SMTP
-        with smtplib.SMTP(GMAIL_SMTP_SERVER, GMAIL_SMTP_PORT) as server:
-            server.starttls()  # Enable TLS encryption
-            server.login(gmail_address, gmail_app_password)
+        # Step 4: Decode base64
+        log("Step 4: Decoding base64 image...")
+        try:
+            image_bytes = base64.b64decode(image_data)
+            debug_info['image_bytes_size'] = len(image_bytes)
+            debug_info['steps_completed'].append('decode_base64')
+            log(f"  Decoded image size: {len(image_bytes)} bytes ({len(image_bytes) / 1024:.1f} KB)")
+        except Exception as decode_err:
+            log(f"  Base64 decode error: {decode_err}")
+            log(f"  First 100 chars of base64: {image_data[:100]}")
+            raise ValueError(f"Failed to decode base64 image: {decode_err}")
+
+        # Step 5: Create image attachment
+        log("Step 5: Creating image attachment...")
+        try:
+            image_attachment = MIMEImage(image_bytes, _subtype='jpeg')
+            filename = f"receipt_{formatted_date.replace('/', '-')}.jpg"
+            image_attachment.add_header(
+                'Content-Disposition',
+                'attachment',
+                filename=filename
+            )
+            msg.attach(image_attachment)
+            debug_info['attachment_filename'] = filename
+            debug_info['steps_completed'].append('create_attachment')
+            log(f"  Attachment created: {filename}")
+        except Exception as attach_err:
+            log(f"  Attachment error: {attach_err}")
+            raise ValueError(f"Failed to create image attachment: {attach_err}")
+
+        # Step 6: Connect to Gmail SMTP
+        log("Step 6: Connecting to Gmail SMTP...")
+        log(f"  Server: {GMAIL_SMTP_SERVER}:{GMAIL_SMTP_PORT}")
+        try:
+            server = smtplib.SMTP(GMAIL_SMTP_SERVER, GMAIL_SMTP_PORT, timeout=30)
+            debug_info['steps_completed'].append('smtp_connect')
+            log("  Connected to SMTP server")
+        except Exception as connect_err:
+            log(f"  SMTP connection error: {connect_err}")
+            raise ConnectionError(f"Failed to connect to Gmail SMTP: {connect_err}")
+
+        try:
+            # Step 7: Start TLS
+            log("Step 7: Starting TLS encryption...")
+            server.starttls()
+            debug_info['steps_completed'].append('start_tls')
+            log("  TLS started successfully")
+
+            # Step 8: Login to Gmail
+            log("Step 8: Logging in to Gmail...")
+            log(f"  Gmail address: {gmail_address}")
+            log(f"  App password length: {len(gmail_app_password)} chars")
+            log(f"  App password (redacted): {gmail_app_password[:4]}...{gmail_app_password[-4:] if len(gmail_app_password) > 8 else '****'}")
+
+            try:
+                server.login(gmail_address, gmail_app_password)
+                debug_info['steps_completed'].append('smtp_login')
+                log("  Login successful!")
+            except smtplib.SMTPAuthenticationError as auth_err:
+                log(f"  Authentication FAILED: {auth_err}")
+                log(f"  Error code: {auth_err.smtp_code}")
+                log(f"  Error message: {auth_err.smtp_error}")
+                raise auth_err
+
+            # Step 9: Send email
+            log("Step 9: Sending email...")
             server.send_message(msg)
+            debug_info['steps_completed'].append('send_message')
+            log("  Email sent successfully!")
 
-        return {'success': True}
+        finally:
+            log("Closing SMTP connection...")
+            server.quit()
+            debug_info['steps_completed'].append('smtp_quit')
+
+        log("=== EMAIL SENT SUCCESSFULLY ===")
+        return {
+            'success': True,
+            'debug': debug_info
+        }
 
     except smtplib.SMTPAuthenticationError as e:
+        error_msg = f"Gmail authentication failed (code {e.smtp_code}): {e.smtp_error.decode() if isinstance(e.smtp_error, bytes) else e.smtp_error}"
+        log(f"AUTH ERROR: {error_msg}")
         return {
             'success': False,
-            'error': 'Gmail authentication failed. Check your App Password.'
+            'error': error_msg,
+            'error_type': 'SMTPAuthenticationError',
+            'debug': debug_info
         }
     except smtplib.SMTPException as e:
+        error_msg = f"SMTP error: {str(e)}"
+        log(f"SMTP ERROR: {error_msg}")
+        log(traceback.format_exc())
         return {
             'success': False,
-            'error': f'Email sending failed: {str(e)}'
+            'error': error_msg,
+            'error_type': 'SMTPException',
+            'debug': debug_info
+        }
+    except ConnectionError as e:
+        error_msg = str(e)
+        log(f"CONNECTION ERROR: {error_msg}")
+        return {
+            'success': False,
+            'error': error_msg,
+            'error_type': 'ConnectionError',
+            'debug': debug_info
+        }
+    except ValueError as e:
+        error_msg = str(e)
+        log(f"VALUE ERROR: {error_msg}")
+        return {
+            'success': False,
+            'error': error_msg,
+            'error_type': 'ValueError',
+            'debug': debug_info
         }
     except Exception as e:
+        error_msg = f"Unexpected error: {str(e)}"
+        log(f"UNEXPECTED ERROR: {error_msg}")
+        log(traceback.format_exc())
         return {
             'success': False,
-            'error': f'Unexpected error: {str(e)}'
+            'error': error_msg,
+            'error_type': type(e).__name__,
+            'traceback': traceback.format_exc(),
+            'debug': debug_info
         }
 
 
 @app.route("/api/send-email", methods=["POST"])
 def handle_send_email():
     """API endpoint to send receipt email notification."""
+    log("=" * 50)
+    log("EMAIL API REQUEST RECEIVED")
+    log("=" * 50)
 
-    # Get credentials from environment variables
+    # Step 1: Get credentials from environment variables
+    log("Checking environment variables...")
     gmail_address = os.environ.get("GMAIL_ADDRESS")
     gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD")
     recipient_email = os.environ.get("RECEIPT_NOTIFICATION_EMAIL")
 
+    env_status = {
+        'GMAIL_ADDRESS': f"SET ({gmail_address})" if gmail_address else "NOT SET",
+        'GMAIL_APP_PASSWORD': f"SET ({len(gmail_app_password)} chars)" if gmail_app_password else "NOT SET",
+        'RECEIPT_NOTIFICATION_EMAIL': f"SET ({recipient_email})" if recipient_email else "NOT SET",
+    }
+    log(f"Environment variables: {env_status}")
+
     # Check for missing configuration
     if not gmail_address or not gmail_app_password:
+        error_msg = "Email not configured. Missing GMAIL_ADDRESS or GMAIL_APP_PASSWORD."
+        log(f"ERROR: {error_msg}")
         return jsonify({
             "success": False,
-            "error": "Email not configured. Missing GMAIL_ADDRESS or GMAIL_APP_PASSWORD."
+            "error": error_msg,
+            "env_status": env_status
         }), 500
 
     if not recipient_email:
+        error_msg = "No recipient configured. Missing RECEIPT_NOTIFICATION_EMAIL."
+        log(f"ERROR: {error_msg}")
         return jsonify({
             "success": False,
-            "error": "No recipient configured. Missing RECEIPT_NOTIFICATION_EMAIL."
+            "error": error_msg,
+            "env_status": env_status
         }), 500
 
-    # Get request data
-    data = request.get_json()
-    if not data:
+    # Step 2: Parse request data
+    log("Parsing request data...")
+    try:
+        data = request.get_json()
+        if not data:
+            log("ERROR: No JSON data in request")
+            return jsonify({
+                "success": False,
+                "error": "No data provided",
+                "content_type": request.content_type
+            }), 400
+    except Exception as parse_err:
+        log(f"ERROR parsing JSON: {parse_err}")
         return jsonify({
             "success": False,
-            "error": "No data provided"
+            "error": f"Failed to parse JSON: {str(parse_err)}"
         }), 400
 
     amount = data.get("amount")
     date = data.get("date")
     image_data = data.get("image")
 
+    log(f"Request data received:")
+    log(f"  - amount: {amount}")
+    log(f"  - date: {date}")
+    log(f"  - image: {len(image_data) if image_data else 0} chars")
+
+    # Validate required fields
     if amount is None or not date:
+        error_msg = f"Missing required fields. amount={amount}, date={date}"
+        log(f"ERROR: {error_msg}")
         return jsonify({
             "success": False,
-            "error": "Missing required fields: amount and date"
+            "error": "Missing required fields: amount and date",
+            "received": {"amount": amount, "date": date, "has_image": bool(image_data)}
         }), 400
 
     if not image_data:
+        log("ERROR: No receipt image provided")
         return jsonify({
             "success": False,
             "error": "No receipt image provided"
         }), 400
 
-    # Send the email
+    # Step 3: Send the email
+    log("Calling send_receipt_email...")
     result = send_receipt_email(
         recipient_email=recipient_email,
         amount=float(amount),
@@ -175,32 +333,105 @@ def handle_send_email():
         gmail_app_password=gmail_app_password
     )
 
+    log(f"send_receipt_email returned: success={result.get('success')}")
+
     if result['success']:
         return jsonify({
             "success": True,
-            "message": f"Email sent to {recipient_email}"
+            "message": f"Email sent to {recipient_email}",
+            "debug": result.get('debug', {})
         })
     else:
+        log(f"Email failed: {result.get('error')}")
         return jsonify({
             "success": False,
-            "error": result.get('error', 'Unknown error')
+            "error": result.get('error', 'Unknown error'),
+            "error_type": result.get('error_type', 'Unknown'),
+            "debug": result.get('debug', {}),
+            "traceback": result.get('traceback')
         }), 500
 
 
 @app.route("/api/send-email/health", methods=["GET"])
 def health_check():
     """Health check endpoint for email service."""
-    gmail_configured = bool(
-        os.environ.get("GMAIL_ADDRESS") and
-        os.environ.get("GMAIL_APP_PASSWORD")
-    )
-    recipient_configured = bool(os.environ.get("RECEIPT_NOTIFICATION_EMAIL"))
+    gmail_address = os.environ.get("GMAIL_ADDRESS")
+    gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD")
+    recipient_email = os.environ.get("RECEIPT_NOTIFICATION_EMAIL")
+
+    gmail_configured = bool(gmail_address and gmail_app_password)
+    recipient_configured = bool(recipient_email)
 
     return jsonify({
         "status": "ok" if (gmail_configured and recipient_configured) else "not_configured",
         "gmail_configured": gmail_configured,
-        "recipient_configured": recipient_configured
+        "recipient_configured": recipient_configured,
+        "gmail_address": gmail_address if gmail_address else None,
+        "recipient_email": recipient_email if recipient_email else None,
+        "app_password_length": len(gmail_app_password) if gmail_app_password else 0
     })
+
+
+@app.route("/api/send-email/test-smtp", methods=["GET"])
+def test_smtp():
+    """Test SMTP connection without sending an email."""
+    log("Testing SMTP connection...")
+
+    gmail_address = os.environ.get("GMAIL_ADDRESS")
+    gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD")
+
+    if not gmail_address or not gmail_app_password:
+        return jsonify({
+            "success": False,
+            "error": "Missing credentials"
+        }), 500
+
+    steps = []
+    try:
+        log("Step 1: Connecting to SMTP server...")
+        server = smtplib.SMTP(GMAIL_SMTP_SERVER, GMAIL_SMTP_PORT, timeout=30)
+        steps.append("connected")
+        log("  Connected!")
+
+        log("Step 2: Starting TLS...")
+        server.starttls()
+        steps.append("tls_started")
+        log("  TLS started!")
+
+        log("Step 3: Logging in...")
+        server.login(gmail_address, gmail_app_password)
+        steps.append("logged_in")
+        log("  Login successful!")
+
+        server.quit()
+        steps.append("disconnected")
+
+        return jsonify({
+            "success": True,
+            "message": "SMTP connection test passed!",
+            "steps": steps
+        })
+
+    except smtplib.SMTPAuthenticationError as e:
+        error_msg = f"Authentication failed: {e.smtp_error.decode() if isinstance(e.smtp_error, bytes) else e.smtp_error}"
+        log(f"Auth error: {error_msg}")
+        return jsonify({
+            "success": False,
+            "error": error_msg,
+            "error_code": e.smtp_code,
+            "steps": steps
+        }), 500
+
+    except Exception as e:
+        log(f"Error: {str(e)}")
+        log(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "steps": steps,
+            "traceback": traceback.format_exc()
+        }), 500
 
 
 # For local development
