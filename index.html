@@ -1125,6 +1125,108 @@
             reader.readAsDataURL(file);
         }
 
+        /**
+         * Compress and resize an image to fit within OCR.space limits (1024 KB)
+         * @param {string} dataUrl - The original image as a data URL
+         * @param {number} maxWidth - Maximum width in pixels (default 1200)
+         * @param {number} maxHeight - Maximum height in pixels (default 1600)
+         * @param {number} initialQuality - Starting JPEG quality (default 0.85)
+         * @returns {Promise<string>} - Compressed image as data URL
+         */
+        async function compressImage(dataUrl, maxWidth = 1200, maxHeight = 1600, initialQuality = 0.85) {
+            console.log('🗜️ Starting image compression...');
+            console.log('   - Max dimensions:', maxWidth, 'x', maxHeight);
+            console.log('   - Initial quality:', initialQuality);
+
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    console.log('   - Original dimensions:', img.width, 'x', img.height);
+
+                    // Calculate new dimensions maintaining aspect ratio
+                    let { width, height } = img;
+
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                    if (height > maxHeight) {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+
+                    console.log('   - Resized dimensions:', width, 'x', height);
+
+                    // Create canvas and draw resized image
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+
+                    // Use better image smoothing for quality
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Try to compress to under 1024 KB
+                    const maxSizeBytes = 1024 * 1024; // 1024 KB
+                    let quality = initialQuality;
+                    let compressedDataUrl;
+                    let attempts = 0;
+                    const maxAttempts = 10;
+
+                    do {
+                        compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                        // Calculate approximate size (data URL is base64, ~33% larger than binary)
+                        const approximateSize = Math.round((compressedDataUrl.length - 'data:image/jpeg;base64,'.length) * 0.75);
+
+                        console.log(`   - Attempt ${attempts + 1}: quality=${quality.toFixed(2)}, size≈${Math.round(approximateSize / 1024)} KB`);
+
+                        if (approximateSize <= maxSizeBytes) {
+                            console.log('✅ Image compressed successfully!');
+                            console.log(`   - Final size: ~${Math.round(approximateSize / 1024)} KB`);
+                            resolve(compressedDataUrl);
+                            return;
+                        }
+
+                        // Reduce quality for next attempt
+                        quality -= 0.1;
+                        attempts++;
+                    } while (quality > 0.1 && attempts < maxAttempts);
+
+                    // If still too large after quality reduction, try reducing dimensions further
+                    if (attempts >= maxAttempts || quality <= 0.1) {
+                        console.log('⚠️ Quality reduction not enough, reducing dimensions...');
+
+                        // Recursively try with smaller dimensions
+                        const smallerMaxWidth = Math.round(maxWidth * 0.75);
+                        const smallerMaxHeight = Math.round(maxHeight * 0.75);
+
+                        if (smallerMaxWidth < 400) {
+                            // Give up if dimensions would be too small for OCR
+                            console.log('⚠️ Cannot compress further without losing OCR quality');
+                            resolve(compressedDataUrl); // Return best effort
+                        } else {
+                            // Try again with smaller dimensions
+                            compressImage(dataUrl, smallerMaxWidth, smallerMaxHeight, 0.85)
+                                .then(resolve)
+                                .catch(reject);
+                        }
+                        return;
+                    }
+
+                    resolve(compressedDataUrl);
+                };
+
+                img.onerror = (e) => {
+                    console.error('❌ Failed to load image for compression:', e);
+                    reject(new Error('Failed to load image for compression'));
+                };
+
+                img.src = dataUrl;
+            });
+        }
+
         async function analyzeReceipt() {
             if (!currentImageData) return;
 
@@ -1133,15 +1235,43 @@
             resultsCard.classList.add('hidden');
             hideError();
 
+            // Get the loading text element to update status
+            const loadingText = loadingCard.querySelector('.loading span');
+            const originalLoadingText = loadingText ? loadingText.textContent : '';
+
             try {
+                // Step 1: Compress the image if needed
+                let imageToSend = currentImageData;
+
+                // Check if image needs compression (rough size estimate)
+                const roughSizeKB = Math.round((currentImageData.length - 'data:image/jpeg;base64,'.length) * 0.75 / 1024);
+                console.log('📏 Original image size (approx):', roughSizeKB, 'KB');
+
+                if (roughSizeKB > 900) { // Compress if over ~900 KB to have some margin
+                    if (loadingText) loadingText.textContent = 'Compressing image...';
+                    console.log('🗜️ Image too large, compressing...');
+
+                    try {
+                        imageToSend = await compressImage(currentImageData);
+                        const newSizeKB = Math.round((imageToSend.length - 'data:image/jpeg;base64,'.length) * 0.75 / 1024);
+                        console.log('✅ Compressed from', roughSizeKB, 'KB to', newSizeKB, 'KB');
+                    } catch (compressError) {
+                        console.error('⚠️ Compression failed, trying with original:', compressError);
+                        // Continue with original image, API might still accept it
+                    }
+                }
+
+                // Step 2: Send to OCR API
+                if (loadingText) loadingText.textContent = 'Scanning your receipt...';
+
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        image: currentImageData,
-                        media_type: currentMediaType,
+                        image: imageToSend,
+                        media_type: 'image/jpeg', // Always JPEG after compression
                     }),
                 });
 
@@ -1167,6 +1297,8 @@
                 showError(error.message);
             } finally {
                 analyzeBtn.disabled = false;
+                // Restore original loading text for next time
+                if (loadingText) loadingText.textContent = originalLoadingText;
             }
         }
 
