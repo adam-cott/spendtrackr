@@ -1324,6 +1324,7 @@
             };
 
             try {
+                // Step 1: Save to Supabase
                 const { data, error } = await supabaseClient
                     .from('receipts')
                     .insert([expense])
@@ -1331,11 +1332,56 @@
 
                 if (error) throw error;
 
+                console.log('✅ Expense saved to Supabase');
+
+                // Step 2: Send email notification (don't fail if email fails)
+                let emailSent = false;
+                let emailError = null;
+
+                if (currentImageData) {
+                    try {
+                        console.log('📧 Sending email notification...');
+                        const emailResponse = await fetch('/api/send-email', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                amount: expense.amount,
+                                date: expense.date,
+                                image: currentImageData,
+                            }),
+                        });
+
+                        const emailResult = await emailResponse.json();
+
+                        if (emailResponse.ok && emailResult.success) {
+                            emailSent = true;
+                            console.log('✅ Email notification sent successfully');
+                        } else {
+                            emailError = emailResult.error || 'Unknown email error';
+                            console.warn('⚠️ Email notification failed:', emailError);
+                        }
+                    } catch (emailErr) {
+                        emailError = emailErr.message;
+                        console.warn('⚠️ Email notification error:', emailErr);
+                    }
+                } else {
+                    console.log('ℹ️ No image data available for email attachment');
+                }
+
                 // Reload expenses from database
                 await loadExpenses();
 
-                // Show success toast
-                showSuccessToast();
+                // Show appropriate success message
+                if (emailSent) {
+                    showSuccessToast('Expense saved & email sent!');
+                } else if (emailError) {
+                    showSuccessToast('Expense saved (email failed)');
+                    console.warn('Email error details:', emailError);
+                } else {
+                    showSuccessToast('Expense saved successfully!');
+                }
 
                 // Reset form after brief delay
                 setTimeout(() => {
@@ -1347,10 +1393,20 @@
             }
         }
 
-        function showSuccessToast() {
+        function showSuccessToast(message = 'Expense saved successfully!') {
+            // Update toast message if custom message provided
+            const toastText = successToast.querySelector('span');
+            if (toastText) {
+                toastText.textContent = message;
+            }
+
             successToast.classList.add('show');
             setTimeout(() => {
                 successToast.classList.remove('show');
+                // Reset to default message
+                if (toastText) {
+                    toastText.textContent = 'Expense saved successfully!';
+                }
             }, 3000);
         }
 
