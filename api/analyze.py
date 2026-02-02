@@ -29,6 +29,31 @@ VENDOR_CATEGORIES = {
     "starbucks": "food",
     "dunkin": "food",
     "peet": "food",
+    # Grocery stores (dedicated food retailers)
+    "kroger": "food",
+    "whole foods": "food",
+    "trader joe": "food",
+    "safeway": "food",
+    "aldi": "food",
+    "publix": "food",
+    "albertsons": "food",
+    "vons": "food",
+    "ralphs": "food",
+    "food lion": "food",
+    "giant": "food",
+    "stop & shop": "food",
+    "wegmans": "food",
+    "heb": "food",
+    "h-e-b": "food",
+    "meijer": "food",
+    "winco": "food",
+    "food 4 less": "food",
+    "grocery outlet": "food",
+    "sprouts": "food",
+    "smiths": "food",
+    "frys": "food",
+    "harmons": "food",
+    "maceys": "food",
     # Gas stations
     "shell": "gas",
     "exxon": "gas",
@@ -41,24 +66,15 @@ VENDOR_CATEGORIES = {
     "phillips": "gas",
     "conoco": "gas",
     "valero": "gas",
-    # Retail (stores, groceries, pharmacies)
-    "target": "retail",
-    "walmart": "retail",
-    "costco": "retail",
+    # Retail (non-food stores)
     "amazon": "retail",
     "best buy": "retail",
-    "kroger": "retail",
-    "whole foods": "retail",
-    "trader joe": "retail",
-    "safeway": "retail",
-    "aldi": "retail",
-    "publix": "retail",
-    "cvs": "retail",
-    "walgreens": "retail",
-    "rite aid": "retail",
-    "smiths": "retail",
-    "harmons": "retail",
-    "maceys": "retail",
+    "home depot": "retail",
+    "lowes": "retail",
+    "ikea": "retail",
+    "bed bath": "retail",
+    "office depot": "retail",
+    "staples": "retail",
     # Entertainment
     "amc": "entertainment",
     "regal": "entertainment",
@@ -74,6 +90,15 @@ VENDOR_CATEGORIES = {
     "topgolf": "entertainment",
     "bowling": "entertainment",
     "arcade": "entertainment",
+}
+
+# Mixed retailers - stores that sell both food and non-food items
+# These get special handling: check receipt text for food items
+MIXED_RETAILERS = {
+    "target", "walmart", "costco", "sam's club", "sams club",
+    "cvs", "walgreens", "rite aid",
+    "dollar tree", "dollar general", "family dollar",
+    "7-eleven", "7 eleven", "circle k",
 }
 
 # Known vendor names with correct formatting (key: lowercase for matching, value: display name)
@@ -301,20 +326,38 @@ FOOD_ITEM_KEYWORDS = {
 }
 
 
+def has_food_items(text: str) -> bool:
+    """Check if receipt text contains food-related keywords."""
+    text_lower = text.lower()
+    for keyword in FOOD_ITEM_KEYWORDS:
+        if keyword in text_lower:
+            return True
+    return False
+
+
 def get_category(vendor: str, ocr_text: str = "") -> str:
     """
     Get category for a vendor based on mapping, keywords, and receipt contents.
 
     Checks:
-    1. Known vendor mappings
-    2. Food vendor keywords in vendor name
-    3. Known food vendor names
-    4. Food item keywords in OCR text
+    1. Mixed retailers - scan receipt for food items to decide food vs retail
+    2. Known vendor mappings
+    3. Food vendor keywords in vendor name
+    4. Known food vendor names
+    5. Food item keywords in OCR text (1+ match = food)
     """
     vendor_lower = vendor.lower()
     text_lower = ocr_text.lower() if ocr_text else ""
 
-    # First check explicit vendor mappings
+    # Check for mixed retailers first (Target, Walmart, Costco, etc.)
+    # These need receipt text analysis to determine food vs retail
+    for mixed_vendor in MIXED_RETAILERS:
+        if mixed_vendor in vendor_lower:
+            if text_lower and has_food_items(text_lower):
+                return "food"
+            return "retail"
+
+    # Check explicit vendor mappings
     for known_vendor, category in VENDOR_CATEGORIES.items():
         if known_vendor in vendor_lower:
             return category
@@ -329,15 +372,9 @@ def get_category(vendor: str, ocr_text: str = "") -> str:
         if food_vendor in vendor_lower:
             return "food"
 
-    # Check receipt text for food item keywords (for generic vendors)
-    if text_lower:
-        food_keyword_count = 0
-        for keyword in FOOD_ITEM_KEYWORDS:
-            if keyword in text_lower:
-                food_keyword_count += 1
-                # If we find multiple food keywords, it's likely a food purchase
-                if food_keyword_count >= 2:
-                    return "food"
+    # Check receipt text for food item keywords (1+ match = food)
+    if text_lower and has_food_items(text_lower):
+        return "food"
 
     return "other"
 
