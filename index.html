@@ -17,7 +17,9 @@
     <meta name="apple-mobile-web-app-title" content="SpendTrackr">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             /* Earthy Green color scheme */
@@ -152,14 +154,17 @@
             border-radius: var(--radius-lg);
             padding: 56px 32px;
             text-align: center;
-            cursor: pointer;
             transition: all 0.3s ease;
             background: linear-gradient(135deg, var(--bg-subtle) 0%, var(--bg-card) 100%);
             position: relative;
             overflow: hidden;
         }
 
-        .upload-area:hover {
+        .upload-area.has-image {
+            cursor: pointer;
+        }
+
+        .upload-area.has-image:hover {
             border-color: var(--primary);
             background: linear-gradient(135deg, var(--primary-subtle) 0%, var(--bg-card) 100%);
         }
@@ -182,6 +187,32 @@
             box-shadow: var(--shadow-xl);
             display: block;
             margin: 0 auto;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .upload-area img:hover {
+            opacity: 0.9;
+        }
+
+        .upload-area.has-image::after {
+            content: 'Click to change';
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+
+        .upload-area.has-image:hover::after {
+            opacity: 1;
         }
 
         .upload-icon {
@@ -192,7 +223,7 @@
             transition: all 0.3s ease;
         }
 
-        .upload-area:hover .upload-icon {
+        .upload-area.dragover .upload-icon {
             color: var(--primary);
             transform: translateY(-4px);
         }
@@ -368,7 +399,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Alerts */
@@ -603,12 +636,449 @@
             height: 18px;
         }
 
+        /* PIN Authentication Screen */
+        .pin-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-primary);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .pin-screen.hidden {
+            display: none;
+        }
+
+        .pin-container {
+            background: var(--bg-card);
+            padding: 48px 40px;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--border-light);
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .pin-logo {
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .pin-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9375rem;
+            margin-bottom: 32px;
+        }
+
+        .pin-inputs {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .pin-input {
+            width: 56px;
+            height: 64px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            font-family: var(--font-sans);
+            border: 2px solid var(--border-medium);
+            border-radius: var(--radius-md);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            outline: none;
+            transition: all 0.2s ease;
+            -webkit-text-security: disc;
+            -moz-text-security: disc;
+            text-security: disc;
+        }
+
+        .pin-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-light);
+        }
+
+        .pin-input.error {
+            border-color: var(--error);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20%,
+            60% {
+                transform: translateX(-8px);
+            }
+
+            40%,
+            80% {
+                transform: translateX(8px);
+            }
+        }
+
+        .pin-remember {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 28px;
+            cursor: pointer;
+        }
+
+        .pin-remember input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .pin-remember label {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .pin-submit {
+            width: 100%;
+            padding: 16px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pin-submit:hover {
+            background: var(--primary-dark);
+        }
+
+        .pin-submit:disabled {
+            background: var(--border-medium);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .pin-error {
+            background: var(--error-bg);
+            color: var(--error);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .pin-error.show {
+            display: block;
+        }
+
+        .pin-attempts {
+            color: var(--text-muted);
+            font-size: 0.8125rem;
+            margin-top: 16px;
+        }
+
+        .pin-lockout {
+            background: var(--error-bg);
+            color: var(--error);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+        }
+
+        .pin-lockout-timer {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: var(--font-serif);
+        }
+
+        @media (max-width: 640px) {
+            .pin-container {
+                padding: 36px 24px;
+            }
+
+            .pin-input {
+                width: 48px;
+                height: 56px;
+                font-size: 1.25rem;
+            }
+
+            .pin-inputs {
+                gap: 10px;
+            }
+        }
+
+        /* Upload Options */
+        .upload-options {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .upload-option-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 20px 16px;
+            background: var(--bg-subtle);
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .upload-option-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-subtle);
+            color: var(--primary);
+        }
+
+        .upload-option-btn svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .upload-option-btn span {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        /* Camera Modal */
+        .camera-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .camera-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .camera-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .camera-header h3 {
+            color: white;
+            font-size: 1.125rem;
+            font-weight: 500;
+        }
+
+        .camera-close-btn {
+            background: none;
+            border: none;
+            color: white;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+        }
+
+        .camera-close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .camera-view {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .camera-view video,
+        .camera-view img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .camera-view video.mirror,
+        .camera-view .camera-preview-img.mirror {
+            transform: scaleX(-1);
+        }
+
+        .camera-loading {
+            position: absolute;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .camera-loading .spinner {
+            border-top-color: white;
+        }
+
+        .camera-error {
+            position: absolute;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            max-width: 300px;
+        }
+
+        .camera-error svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            color: var(--error);
+        }
+
+        .camera-error p {
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .camera-controls {
+            padding: 24px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .capture-btn {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+        }
+
+        .capture-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .capture-btn:active {
+            transform: scale(0.95);
+        }
+
+        .capture-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .camera-action-btn {
+            padding: 14px 24px;
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 120px;
+        }
+
+        .retake-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .retake-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .use-photo-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .use-photo-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .switch-camera-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+        }
+
+        .switch-camera-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .switch-camera-btn.hidden {
+            display: none;
+        }
+
         /* Animations */
         @keyframes fadeInUp {
             from {
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -616,14 +1086,30 @@
         }
 
         @keyframes successPulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
-        .card:nth-child(2) { animation-delay: 0.1s; }
-        .card:nth-child(3) { animation-delay: 0.2s; }
-        .card:nth-child(4) { animation-delay: 0.3s; }
+        .card:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .card:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        .card:nth-child(4) {
+            animation-delay: 0.3s;
+        }
 
         /* Mobile Responsive */
         @media (max-width: 640px) {
@@ -685,7 +1171,8 @@
             .form-group input,
             .form-group select {
                 padding: 14px 16px;
-                font-size: 16px; /* Prevents iOS zoom */
+                font-size: 16px;
+                /* Prevents iOS zoom */
             }
 
             /* Maintain $ symbol spacing on mobile */
@@ -724,11 +1211,80 @@
                 width: 36px;
                 height: 36px;
             }
+
+            .upload-options {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .upload-option-btn {
+                flex-direction: row;
+                padding: 16px 20px;
+                justify-content: center;
+            }
+
+            .upload-option-btn svg {
+                width: 24px;
+                height: 24px;
+            }
+
+            .camera-controls {
+                padding: 20px;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom, 0));
+            }
+
+            .capture-btn {
+                width: 64px;
+                height: 64px;
+            }
+
+            .camera-action-btn {
+                padding: 12px 20px;
+                font-size: 0.9375rem;
+                min-width: 100px;
+            }
         }
     </style>
 </head>
 
 <body>
+    <!-- PIN Authentication Screen -->
+    <div class="pin-screen" id="pinScreen">
+        <div class="pin-container">
+            <div class="pin-logo">SpendTrackr</div>
+            <p class="pin-subtitle">Enter your 4-digit PIN to continue</p>
+
+            <div class="pin-lockout hidden" id="pinLockout">
+                <p>Too many attempts. Try again in:</p>
+                <div class="pin-lockout-timer" id="lockoutTimer">5:00</div>
+            </div>
+
+            <div class="pin-error" id="pinError"></div>
+
+            <form id="pinForm">
+                <div class="pin-inputs">
+                    <input type="tel" class="pin-input" id="pin1" maxlength="1" pattern="[0-9]" inputmode="numeric"
+                        autocomplete="off" required>
+                    <input type="tel" class="pin-input" id="pin2" maxlength="1" pattern="[0-9]" inputmode="numeric"
+                        autocomplete="off" required>
+                    <input type="tel" class="pin-input" id="pin3" maxlength="1" pattern="[0-9]" inputmode="numeric"
+                        autocomplete="off" required>
+                    <input type="tel" class="pin-input" id="pin4" maxlength="1" pattern="[0-9]" inputmode="numeric"
+                        autocomplete="off" required>
+                </div>
+
+                <div class="pin-remember">
+                    <input type="checkbox" id="rememberMe">
+                    <label for="rememberMe">Remember me on this device</label>
+                </div>
+
+                <button type="submit" class="pin-submit" id="pinSubmit">Unlock</button>
+            </form>
+
+            <p class="pin-attempts" id="pinAttempts"></p>
+        </div>
+    </div>
+
     <div class="container">
         <header class="header">
             <h1>SpendTrackr</h1>
@@ -741,20 +1297,40 @@
                 <span class="card-icon">&#128247;</span>
                 <h2>Upload Receipt</h2>
             </div>
-            <label for="fileInput" class="upload-area" id="uploadArea">
+            <div class="upload-area" id="uploadArea">
                 <div id="uploadPlaceholder">
                     <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    <div class="upload-text">Drop your receipt here or click to browse</div>
+                    <div class="upload-text">Capture or upload your receipt</div>
                     <div class="upload-hint">Supports JPG and PNG images</div>
+                    <div class="upload-options">
+                        <button type="button" class="upload-option-btn" id="cameraBtn">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>Take Photo</span>
+                        </button>
+                        <label for="fileInput" class="upload-option-btn">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>Choose from Gallery</span>
+                        </label>
+                    </div>
                 </div>
                 <img id="previewImage" class="hidden" alt="Receipt preview">
-            </label>
-            <input type="file" id="fileInput" accept="image/jpeg,image/png">
+            </div>
+            <input type="file" id="fileInput" accept="image/jpeg,image/png" capture="environment">
             <button id="analyzeBtn" class="btn-brown hidden" style="margin-top: 24px;">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
                 Analyze Receipt
             </button>
@@ -771,7 +1347,8 @@
         <!-- Error State -->
         <div class="error hidden" id="errorMsg">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span id="errorText"></span>
         </div>
@@ -784,7 +1361,8 @@
             </div>
             <div class="success-message" id="successMsg">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Receipt scanned successfully! Review and edit the details below.
             </div>
@@ -841,7 +1419,7 @@
                     <button type="button" class="btn-secondary" onclick="cancelEntry()">Cancel</button>
                     <button type="submit" class="btn-success">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
                         Save Expense
                     </button>
@@ -858,7 +1436,8 @@
             <div id="expenseHistory">
                 <div class="empty-state" id="emptyState">
                     <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     <p>No expenses yet. Upload a receipt to get started.</p>
                 </div>
@@ -887,7 +1466,8 @@
                 <button type="button" class="btn-secondary" onclick="clearAllExpenses()">Clear All</button>
                 <button type="button" onclick="exportToExcel()">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                     Export to Excel
                 </button>
@@ -895,11 +1475,52 @@
         </div>
     </div>
 
+    <!-- Camera Modal -->
+    <div class="camera-modal" id="cameraModal">
+        <div class="camera-header">
+            <h3>Take Photo</h3>
+            <button type="button" class="camera-close-btn" id="cameraCloseBtn">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="camera-view" id="cameraView">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <img id="capturedImage" class="camera-preview-img hidden" alt="Captured photo">
+            <div class="camera-loading" id="cameraLoading">
+                <div class="spinner"></div>
+                <span>Starting camera...</span>
+            </div>
+            <div class="camera-error hidden" id="cameraError">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p id="cameraErrorText">Unable to access camera. Please check permissions.</p>
+                <button type="button" class="camera-action-btn retake-btn" onclick="closeCamera()">Close</button>
+            </div>
+            <button type="button" class="switch-camera-btn hidden" id="switchCameraBtn" title="Switch camera">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        </div>
+        <div class="camera-controls" id="cameraControls">
+            <button type="button" class="capture-btn" id="captureBtn" title="Take photo"></button>
+        </div>
+        <div class="camera-controls hidden" id="previewControls">
+            <button type="button" class="camera-action-btn retake-btn" id="retakeBtn">Retake</button>
+            <button type="button" class="camera-action-btn use-photo-btn" id="usePhotoBtn">Use Photo</button>
+        </div>
+    </div>
+
     <!-- Success Toast -->
     <div class="toast" id="successToast">
         <div class="toast-icon">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
             </svg>
         </div>
         <span>Expense saved successfully!</span>
@@ -912,12 +1533,251 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
+        // ==================== PIN AUTHENTICATION ====================
+        const AUTH_STORAGE_KEY = 'spendtrackr_auth';
+
+        // Check if already authenticated
+        function isAuthenticated() {
+            // Check localStorage first (persistent), then sessionStorage (temporary)
+            const localAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+            const sessionAuth = sessionStorage.getItem(AUTH_STORAGE_KEY);
+            return !!(localAuth || sessionAuth);
+        }
+
+        // PIN Screen DOM elements
+        const pinScreen = document.getElementById('pinScreen');
+        const pinForm = document.getElementById('pinForm');
+        const pinInputs = [
+            document.getElementById('pin1'),
+            document.getElementById('pin2'),
+            document.getElementById('pin3'),
+            document.getElementById('pin4')
+        ];
+        const pinError = document.getElementById('pinError');
+        const pinAttempts = document.getElementById('pinAttempts');
+        const pinSubmit = document.getElementById('pinSubmit');
+        const rememberMe = document.getElementById('rememberMe');
+        const pinLockout = document.getElementById('pinLockout');
+        const lockoutTimer = document.getElementById('lockoutTimer');
+
+        let lockoutInterval = null;
+
+        // Show/hide PIN screen based on auth status
+        function checkAuthAndShowScreen() {
+            if (isAuthenticated()) {
+                pinScreen.classList.add('hidden');
+                console.log('✅ User is authenticated');
+            } else {
+                pinScreen.classList.remove('hidden');
+                pinInputs[0].focus();
+                console.log('🔒 User needs to authenticate');
+            }
+        }
+
+        // PIN input handling - auto-advance and auto-submit
+        pinInputs.forEach((input, index) => {
+            // Handle input
+            input.addEventListener('input', (e) => {
+                // Only allow digits
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+
+                if (e.target.value.length === 1) {
+                    // Move to next input
+                    if (index < pinInputs.length - 1) {
+                        pinInputs[index + 1].focus();
+                    } else {
+                        // Last input filled - auto submit
+                        pinForm.dispatchEvent(new Event('submit'));
+                    }
+                }
+
+                // Clear error state
+                input.classList.remove('error');
+                pinError.classList.remove('show');
+            });
+
+            // Handle backspace
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                    pinInputs[index - 1].focus();
+                    pinInputs[index - 1].value = '';
+                }
+            });
+
+            // Handle paste
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 4);
+
+                pastedData.split('').forEach((char, i) => {
+                    if (pinInputs[i]) {
+                        pinInputs[i].value = char;
+                    }
+                });
+
+                // Focus last filled input or submit if complete
+                if (pastedData.length >= 4) {
+                    pinForm.dispatchEvent(new Event('submit'));
+                } else if (pastedData.length > 0) {
+                    pinInputs[Math.min(pastedData.length, 3)].focus();
+                }
+            });
+
+            // Select all on focus
+            input.addEventListener('focus', () => {
+                input.select();
+            });
+        });
+
+        // Format lockout time
+        function formatLockoutTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Start lockout countdown
+        function startLockoutCountdown(seconds) {
+            pinLockout.classList.remove('hidden');
+            pinSubmit.disabled = true;
+            pinInputs.forEach(input => input.disabled = true);
+
+            let remaining = seconds;
+            lockoutTimer.textContent = formatLockoutTime(remaining);
+
+            if (lockoutInterval) clearInterval(lockoutInterval);
+
+            lockoutInterval = setInterval(() => {
+                remaining--;
+                lockoutTimer.textContent = formatLockoutTime(remaining);
+
+                if (remaining <= 0) {
+                    clearInterval(lockoutInterval);
+                    pinLockout.classList.add('hidden');
+                    pinSubmit.disabled = false;
+                    pinInputs.forEach(input => input.disabled = false);
+                    pinInputs[0].focus();
+                    pinAttempts.textContent = '';
+                }
+            }, 1000);
+        }
+
+        // Handle PIN form submission
+        pinForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const pin = pinInputs.map(input => input.value).join('');
+
+            if (pin.length !== 4) {
+                pinError.textContent = 'Please enter all 4 digits';
+                pinError.classList.add('show');
+                return;
+            }
+
+            pinSubmit.disabled = true;
+            pinSubmit.textContent = 'Verifying...';
+
+            try {
+                const response = await fetch('/api/verify-pin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ pin }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Store auth token
+                    const storage = rememberMe.checked ? localStorage : sessionStorage;
+                    storage.setItem(AUTH_STORAGE_KEY, result.token);
+
+                    // Hide PIN screen
+                    pinScreen.classList.add('hidden');
+                    console.log('✅ Authentication successful');
+
+                    // Clear inputs
+                    pinInputs.forEach(input => input.value = '');
+                } else {
+                    // Show error
+                    pinError.textContent = result.error || 'Incorrect PIN';
+                    pinError.classList.add('show');
+
+                    // Shake inputs
+                    pinInputs.forEach(input => {
+                        input.classList.add('error');
+                        input.value = '';
+                    });
+                    pinInputs[0].focus();
+
+                    // Show attempts remaining
+                    if (result.attempts_remaining !== undefined && result.attempts_remaining > 0) {
+                        pinAttempts.textContent = `${result.attempts_remaining} attempts remaining`;
+                    } else if (result.lockout_remaining) {
+                        startLockoutCountdown(result.lockout_remaining);
+                    }
+
+                    // Remove shake animation after it completes
+                    setTimeout(() => {
+                        pinInputs.forEach(input => input.classList.remove('error'));
+                    }, 500);
+                }
+            } catch (error) {
+                console.error('PIN verification error:', error);
+                pinError.textContent = 'Connection error. Please try again.';
+                pinError.classList.add('show');
+            } finally {
+                pinSubmit.disabled = false;
+                pinSubmit.textContent = 'Unlock';
+            }
+        });
+
+        // Check for lockout on page load (handle 429 response)
+        async function checkLockoutStatus() {
+            try {
+                const response = await fetch('/api/verify-pin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ pin: '0000' }), // Dummy PIN to check status
+                });
+
+                if (response.status === 429) {
+                    const result = await response.json();
+                    if (result.lockout_remaining) {
+                        startLockoutCountdown(result.lockout_remaining);
+                    }
+                }
+            } catch (e) {
+                // Ignore - just checking status
+            }
+        }
+
+        // Initialize auth check
+        checkAuthAndShowScreen();
+        if (!isAuthenticated()) {
+            checkLockoutStatus();
+        }
+
+        // Logout function (for debugging/manual logout)
+        function logout() {
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+            sessionStorage.removeItem(AUTH_STORAGE_KEY);
+            pinScreen.classList.remove('hidden');
+            pinInputs[0].focus();
+            console.log('🔒 Logged out');
+        }
+
+        // ==================== END PIN AUTHENTICATION ====================
+
         // Supabase configuration
         const SUPABASE_URL = 'https://gqdagvmiyeyboqzolfsc.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxZGFndm1peWV5Ym9xem9sZnNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NTA4NzQsImV4cCI6MjA4NTEyNjg3NH0.9WjZCAjn4B_VhniQUppyxQDX57_NerKHyt4hwYiqmpg';
 
         // Global error handler to catch any uncaught errors
-        window.onerror = function(message, source, lineno, colno, error) {
+        window.onerror = function (message, source, lineno, colno, error) {
             console.error('='.repeat(50));
             console.error('🚨 UNCAUGHT ERROR:');
             console.error('   - Message:', message);
@@ -928,7 +1788,7 @@
             return false;
         };
 
-        window.addEventListener('unhandledrejection', function(event) {
+        window.addEventListener('unhandledrejection', function (event) {
             console.error('='.repeat(50));
             console.error('🚨 UNHANDLED PROMISE REJECTION:');
             console.error('   - Reason:', event.reason);
@@ -1019,6 +1879,15 @@
                 if (file) handleFile(file);
             });
             console.log('   - drop listener added');
+
+            // Click on upload area when has-image to pick new file
+            uploadArea.addEventListener('click', (e) => {
+                if (uploadArea.classList.contains('has-image') && e.target === previewImage) {
+                    console.log('📂 Preview image clicked, opening file picker...');
+                    fileInput.click();
+                }
+            });
+            console.log('   - preview click listener added');
 
             // THIS IS THE CRITICAL LISTENER FOR FILE SELECTION
             fileInput.addEventListener('change', (e) => {
@@ -1656,10 +2525,333 @@
             return cat.charAt(0).toUpperCase() + cat.slice(1);
         }
 
+        // ==================== CAMERA FUNCTIONALITY ====================
+        console.log('📍 Step 7: Setting up camera functionality...');
+
+        // Camera DOM elements
+        const cameraBtn = document.getElementById('cameraBtn');
+        const cameraModal = document.getElementById('cameraModal');
+        const cameraCloseBtn = document.getElementById('cameraCloseBtn');
+        const cameraVideo = document.getElementById('cameraVideo');
+        const capturedImage = document.getElementById('capturedImage');
+        const cameraLoading = document.getElementById('cameraLoading');
+        const cameraError = document.getElementById('cameraError');
+        const cameraErrorText = document.getElementById('cameraErrorText');
+        const cameraControls = document.getElementById('cameraControls');
+        const previewControls = document.getElementById('previewControls');
+        const captureBtn = document.getElementById('captureBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const usePhotoBtn = document.getElementById('usePhotoBtn');
+        const switchCameraBtn = document.getElementById('switchCameraBtn');
+
+        // Camera state
+        let cameraStream = null;
+        let capturedImageData = null;
+        let currentFacingMode = 'environment'; // 'environment' = back camera, 'user' = front camera
+        let hasMultipleCameras = false;
+
+        // Check for camera support
+        const hasCameraSupport = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        console.log('   - Camera API supported:', hasCameraSupport);
+
+        // Hide camera button if not supported
+        if (!hasCameraSupport) {
+            cameraBtn.style.display = 'none';
+            console.log('   - Camera button hidden (no support)');
+        }
+
+        // Check for multiple cameras
+        async function checkMultipleCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                hasMultipleCameras = videoDevices.length > 1;
+                console.log('   - Video devices found:', videoDevices.length);
+                return hasMultipleCameras;
+            } catch (e) {
+                console.log('   - Could not enumerate devices:', e);
+                return false;
+            }
+        }
+
+        // Open camera
+        async function openCamera() {
+            console.log('📷 Opening camera...');
+
+            // Show modal
+            cameraModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // Reset state
+            cameraLoading.classList.remove('hidden');
+            cameraError.classList.add('hidden');
+            cameraVideo.classList.remove('hidden');
+            capturedImage.classList.add('hidden');
+            cameraControls.classList.remove('hidden');
+            previewControls.classList.add('hidden');
+            captureBtn.disabled = true;
+            capturedImageData = null;
+
+            try {
+                // Check for multiple cameras
+                await checkMultipleCameras();
+                if (hasMultipleCameras) {
+                    switchCameraBtn.classList.remove('hidden');
+                } else {
+                    switchCameraBtn.classList.add('hidden');
+                }
+
+                // Request camera access
+                const constraints = {
+                    video: {
+                        facingMode: currentFacingMode,
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
+                    audio: false
+                };
+
+                console.log('   - Requesting camera with constraints:', constraints);
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+                // Set video source
+                cameraVideo.srcObject = cameraStream;
+
+                // Wait for video to be ready
+                cameraVideo.onloadedmetadata = () => {
+                    console.log('   - Video ready:', cameraVideo.videoWidth, 'x', cameraVideo.videoHeight);
+                    cameraLoading.classList.add('hidden');
+                    captureBtn.disabled = false;
+
+                    // Mirror front camera only
+                    if (currentFacingMode === 'user') {
+                        cameraVideo.classList.add('mirror');
+                    } else {
+                        cameraVideo.classList.remove('mirror');
+                    }
+                };
+
+                console.log('✅ Camera started successfully');
+
+            } catch (error) {
+                console.error('❌ Camera error:', error);
+                cameraLoading.classList.add('hidden');
+                cameraVideo.classList.add('hidden');
+                cameraError.classList.remove('hidden');
+                switchCameraBtn.classList.add('hidden');
+
+                // Show appropriate error message
+                let errorMessage = 'Unable to access camera.';
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    errorMessage = 'Camera access denied. Please allow camera access in your browser settings.';
+                } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    errorMessage = 'No camera found on this device.';
+                } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                    errorMessage = 'Camera is in use by another application.';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage = 'Camera does not support the requested settings.';
+                }
+                cameraErrorText.textContent = errorMessage;
+            }
+        }
+
+        // Close camera
+        function closeCamera() {
+            console.log('📷 Closing camera...');
+
+            // Stop all tracks
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => {
+                    track.stop();
+                    console.log('   - Stopped track:', track.kind);
+                });
+                cameraStream = null;
+            }
+
+            // Clear video
+            cameraVideo.srcObject = null;
+
+            // Hide modal
+            cameraModal.classList.remove('active');
+            document.body.style.overflow = '';
+
+            // Reset state
+            capturedImageData = null;
+        }
+
+        // Switch camera (front/back)
+        async function switchCamera() {
+            console.log('📷 Switching camera...');
+
+            // Stop current stream
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+
+            // Toggle facing mode
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            console.log('   - New facing mode:', currentFacingMode);
+
+            // Show loading
+            cameraLoading.classList.remove('hidden');
+            captureBtn.disabled = true;
+
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: currentFacingMode,
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
+                    audio: false
+                };
+
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                cameraVideo.srcObject = cameraStream;
+
+                cameraVideo.onloadedmetadata = () => {
+                    cameraLoading.classList.add('hidden');
+                    captureBtn.disabled = false;
+
+                    // Mirror front camera only
+                    if (currentFacingMode === 'user') {
+                        cameraVideo.classList.add('mirror');
+                    } else {
+                        cameraVideo.classList.remove('mirror');
+                    }
+                };
+
+                console.log('✅ Camera switched successfully');
+
+            } catch (error) {
+                console.error('❌ Camera switch error:', error);
+                // Try to revert to previous camera
+                currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+                openCamera();
+            }
+        }
+
+        // Capture photo
+        function capturePhoto() {
+            console.log('📷 Capturing photo...');
+
+            if (!cameraVideo.videoWidth || !cameraVideo.videoHeight) {
+                console.error('❌ Video not ready');
+                return;
+            }
+
+            // Create canvas to capture frame
+            const canvas = document.createElement('canvas');
+            canvas.width = cameraVideo.videoWidth;
+            canvas.height = cameraVideo.videoHeight;
+
+            const ctx = canvas.getContext('2d');
+
+            // Don't mirror the actual image data - we want text to be readable
+            // The preview will be mirrored via CSS if needed to match what user saw
+            ctx.drawImage(cameraVideo, 0, 0);
+
+            // Convert to data URL
+            capturedImageData = canvas.toDataURL('image/jpeg', 0.92);
+            console.log('   - Captured image size:', Math.round(capturedImageData.length / 1024), 'KB');
+
+            // Show preview (mirror if using front camera to match video preview)
+            capturedImage.src = capturedImageData;
+            if (currentFacingMode === 'user') {
+                capturedImage.classList.add('mirror');
+            } else {
+                capturedImage.classList.remove('mirror');
+            }
+            capturedImage.classList.remove('hidden');
+            cameraVideo.classList.add('hidden');
+            switchCameraBtn.classList.add('hidden');
+
+            // Switch controls
+            cameraControls.classList.add('hidden');
+            previewControls.classList.remove('hidden');
+
+            console.log('✅ Photo captured successfully');
+        }
+
+        // Retake photo
+        function retakePhoto() {
+            console.log('📷 Retaking photo...');
+
+            // Clear captured image
+            capturedImageData = null;
+            capturedImage.src = '';
+            capturedImage.classList.add('hidden');
+
+            // Show video again
+            cameraVideo.classList.remove('hidden');
+            if (hasMultipleCameras) {
+                switchCameraBtn.classList.remove('hidden');
+            }
+
+            // Switch controls
+            cameraControls.classList.remove('hidden');
+            previewControls.classList.add('hidden');
+        }
+
+        // Use captured photo
+        function usePhoto() {
+            console.log('📷 Using captured photo...');
+
+            if (!capturedImageData) {
+                console.error('❌ No captured image data');
+                return;
+            }
+
+            // Close camera
+            closeCamera();
+
+            // Use the captured image in the main flow
+            currentImageData = capturedImageData;
+            currentMediaType = 'image/jpeg';
+
+            // Update preview
+            previewImage.src = currentImageData;
+            previewImage.classList.remove('hidden');
+            uploadPlaceholder.classList.add('hidden');
+            uploadArea.classList.add('has-image');
+            analyzeBtn.classList.remove('hidden');
+
+            hideError();
+
+            console.log('✅ Photo ready for analysis');
+        }
+
+        // Camera event listeners
+        if (hasCameraSupport) {
+            cameraBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openCamera();
+            });
+            console.log('   - Camera button listener added');
+
+            cameraCloseBtn.addEventListener('click', closeCamera);
+            captureBtn.addEventListener('click', capturePhoto);
+            retakeBtn.addEventListener('click', retakePhoto);
+            usePhotoBtn.addEventListener('click', usePhoto);
+            switchCameraBtn.addEventListener('click', switchCamera);
+
+            // Close on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && cameraModal.classList.contains('active')) {
+                    closeCamera();
+                }
+            });
+
+            console.log('✅ Camera event listeners set up');
+        }
+
+        // ==================== END CAMERA FUNCTIONALITY ====================
+
         // Debug utilities - can be called from browser console
         window.debugSpendTrackr = {
             // Check the current state of all elements
-            checkState: function() {
+            checkState: function () {
                 console.log('='.repeat(50));
                 console.log('🔍 SpendTrackr Debug State Check');
                 console.log('='.repeat(50));
@@ -1681,13 +2873,13 @@
             },
 
             // Manually trigger file input click
-            triggerFileInput: function() {
+            triggerFileInput: function () {
                 console.log('🖱️ Manually triggering fileInput.click()...');
                 fileInput.click();
             },
 
             // Test with a fake file (for debugging)
-            testWithFakeImage: function() {
+            testWithFakeImage: function () {
                 console.log('🧪 Testing with a 1x1 red PNG...');
                 // Create a minimal valid PNG (1x1 red pixel)
                 const canvas = document.createElement('canvas');
@@ -1697,7 +2889,7 @@
                 ctx.fillStyle = 'red';
                 ctx.fillRect(0, 0, 1, 1);
 
-                canvas.toBlob(function(blob) {
+                canvas.toBlob(function (blob) {
                     const file = new File([blob], 'test.png', { type: 'image/png' });
                     console.log('   - Created test file:', file);
                     handleFile(file);
@@ -1705,7 +2897,7 @@
             },
 
             // Check if event listeners are attached
-            checkListeners: function() {
+            checkListeners: function () {
                 console.log('🔍 Checking event listeners...');
                 console.log('   Note: Cannot directly inspect listeners, but we can verify elements exist');
                 console.log('   - fileInput exists:', !!fileInput);
@@ -1718,18 +2910,52 @@
                 } else {
                     console.log('   - (Use Chrome DevTools: getEventListeners(document.getElementById("fileInput")))');
                 }
+            },
+
+            // Test camera
+            testCamera: function () {
+                console.log('📷 Testing camera...');
+                console.log('   - Camera API supported:', hasCameraSupport);
+                console.log('   - cameraModal:', !!cameraModal);
+                console.log('   - cameraVideo:', !!cameraVideo);
+                console.log('   - Current stream:', !!cameraStream);
+                console.log('   - Has multiple cameras:', hasMultipleCameras);
+                console.log('   - Current facing mode:', currentFacingMode);
+                if (hasCameraSupport) {
+                    console.log('   - Opening camera...');
+                    openCamera();
+                }
+            },
+
+            // Logout (for testing)
+            logout: function () {
+                logout();
+                console.log('🔒 Logged out - refresh page to see PIN screen');
+            },
+
+            // Check auth status
+            checkAuth: function () {
+                console.log('🔐 Auth status:');
+                console.log('   - localStorage token:', localStorage.getItem(AUTH_STORAGE_KEY) ? 'SET' : 'NOT SET');
+                console.log('   - sessionStorage token:', sessionStorage.getItem(AUTH_STORAGE_KEY) ? 'SET' : 'NOT SET');
+                console.log('   - isAuthenticated:', isAuthenticated());
             }
         };
 
         // Final initialization check
         console.log('='.repeat(50));
         console.log('✅ SpendTrackr initialization complete!');
+        console.log('   - Authenticated:', isAuthenticated() ? 'YES' : 'NO');
+        console.log('   - Camera support:', hasCameraSupport ? 'YES' : 'NO');
         console.log('');
         console.log('🔧 Debug commands available in console:');
-        console.log('   debugSpendTrackr.checkState()     - Check current state');
+        console.log('   debugSpendTrackr.checkState()       - Check current state');
         console.log('   debugSpendTrackr.triggerFileInput() - Manually trigger file picker');
-        console.log('   debugSpendTrackr.testWithFakeImage() - Test with a fake image');
-        console.log('   debugSpendTrackr.checkListeners()  - Check event listeners');
+        console.log('   debugSpendTrackr.testWithFakeImage()- Test with a fake image');
+        console.log('   debugSpendTrackr.checkListeners()   - Check event listeners');
+        console.log('   debugSpendTrackr.testCamera()       - Test camera');
+        console.log('   debugSpendTrackr.checkAuth()        - Check auth status');
+        console.log('   debugSpendTrackr.logout()           - Log out');
         console.log('='.repeat(50));
     </script>
 </body>
