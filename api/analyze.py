@@ -391,8 +391,8 @@ def standardize_vendor_name(raw_name: str) -> str:
     if not raw_name:
         return "Unknown Vendor"
 
-    # Remove apostrophes
-    name = raw_name.replace("'", "").replace("'", "")
+    # Remove apostrophes (both straight ' and curly ' from OCR)
+    name = raw_name.replace("'", "").replace("’", "")
 
     # Check for exact match in known vendors (case-insensitive)
     name_lower = name.lower().strip()
@@ -519,8 +519,8 @@ def extract_vendor(text: str) -> str:
         if not line_clean:
             continue
 
-        # Remove apostrophes for matching
-        line_normalized = line_clean.lower().replace("'", "").replace("'", "")
+        # Remove apostrophes for matching (both straight ' and curly ' from OCR)
+        line_normalized = line_clean.lower().replace("'", "").replace("’", "")
 
         # Check against known vendor names dictionary
         for known_key in KNOWN_VENDOR_NAMES.keys():

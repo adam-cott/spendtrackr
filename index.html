@@ -1566,11 +1566,9 @@
         function checkAuthAndShowScreen() {
             if (isAuthenticated()) {
                 pinScreen.classList.add('hidden');
-                console.log('✅ User is authenticated');
             } else {
                 pinScreen.classList.remove('hidden');
                 pinInputs[0].focus();
-                console.log('🔒 User needs to authenticate');
             }
         }
 
@@ -1695,7 +1693,6 @@
 
                     // Hide PIN screen
                     pinScreen.classList.add('hidden');
-                    console.log('✅ Authentication successful');
 
                     // Clear inputs
                     pinInputs.forEach(input => input.value = '');
@@ -1767,7 +1764,6 @@
             sessionStorage.removeItem(AUTH_STORAGE_KEY);
             pinScreen.classList.remove('hidden');
             pinInputs[0].focus();
-            console.log('🔒 Logged out');
         }
 
         // ==================== END PIN AUTHENTICATION ====================
@@ -1778,30 +1774,13 @@
 
         // Global error handler to catch any uncaught errors
         window.onerror = function (message, source, lineno, colno, error) {
-            console.error('='.repeat(50));
-            console.error('🚨 UNCAUGHT ERROR:');
-            console.error('   - Message:', message);
-            console.error('   - Source:', source);
-            console.error('   - Line:', lineno, 'Col:', colno);
-            console.error('   - Error object:', error);
-            console.error('='.repeat(50));
+            console.error('Uncaught error:', message, `(${source}:${lineno}:${colno})`, error);
             return false;
         };
 
         window.addEventListener('unhandledrejection', function (event) {
-            console.error('='.repeat(50));
-            console.error('🚨 UNHANDLED PROMISE REJECTION:');
-            console.error('   - Reason:', event.reason);
-            console.error('='.repeat(50));
+            console.error('Unhandled promise rejection:', event.reason);
         });
-
-        console.log('='.repeat(50));
-        console.log('🚀 SpendTrackr Debug Mode');
-        console.log('='.repeat(50));
-        console.log('📍 Step 1: Script starting...');
-        console.log('📍 Step 2: Checking Supabase library...');
-        console.log('   - window.supabase exists?', typeof window.supabase !== 'undefined');
-        console.log('   - window.supabase value:', window.supabase);
 
         // Initialize Supabase client (named supabaseClient to avoid conflict with window.supabase)
         let supabaseClient;
@@ -1810,10 +1789,8 @@
                 throw new Error('Supabase library not loaded from CDN');
             }
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log('✅ Step 3: Supabase client created successfully');
         } catch (e) {
-            console.error('❌ Step 3 FAILED: Supabase client creation error:', e);
-            console.error('   This may prevent the app from working properly');
+            console.error('Supabase client creation failed, app may not work properly:', e);
         }
 
         // State
@@ -1823,7 +1800,6 @@
         let isLoading = true;
 
         // DOM Elements
-        console.log('📍 Step 4: Getting DOM elements...');
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const previewImage = document.getElementById('previewImage');
@@ -1836,26 +1812,11 @@
         const expenseForm = document.getElementById('expenseForm');
         const successToast = document.getElementById('successToast');
 
-        // Verify critical DOM elements
-        const domCheck = {
-            uploadArea: !!uploadArea,
-            fileInput: !!fileInput,
-            previewImage: !!previewImage,
-            uploadPlaceholder: !!uploadPlaceholder,
-            analyzeBtn: !!analyzeBtn
-        };
-        console.log('   - DOM elements found:', domCheck);
-
         if (!fileInput) {
-            console.error('❌ CRITICAL: fileInput element not found! File upload will not work.');
-        } else {
-            console.log('   - fileInput.type:', fileInput.type);
-            console.log('   - fileInput.accept:', fileInput.accept);
-            console.log('   - fileInput.id:', fileInput.id);
+            console.error('CRITICAL: fileInput element not found! File upload will not work.');
         }
 
         // Event Listeners
-        console.log('📍 Step 5: Setting up event listeners...');
 
         try {
             // Label handles click natively via for="fileInput", so we only need drag/drop
@@ -1863,90 +1824,47 @@
                 e.preventDefault();
                 uploadArea.classList.add('dragover');
             });
-            console.log('   - dragover listener added');
 
             uploadArea.addEventListener('dragleave', () => {
                 uploadArea.classList.remove('dragover');
             });
-            console.log('   - dragleave listener added');
 
             uploadArea.addEventListener('drop', (e) => {
                 e.preventDefault();
-                console.log('📂 DROP EVENT: File dropped!');
                 uploadArea.classList.remove('dragover');
                 const file = e.dataTransfer.files[0];
-                console.log('   - Dropped file:', file);
                 if (file) handleFile(file);
             });
-            console.log('   - drop listener added');
 
             // Click on upload area when has-image to pick new file
             uploadArea.addEventListener('click', (e) => {
                 if (uploadArea.classList.contains('has-image') && e.target === previewImage) {
-                    console.log('📂 Preview image clicked, opening file picker...');
                     fileInput.click();
                 }
             });
-            console.log('   - preview click listener added');
 
-            // THIS IS THE CRITICAL LISTENER FOR FILE SELECTION
             fileInput.addEventListener('change', (e) => {
-                console.log('='.repeat(50));
-                console.log('📂 FILE INPUT CHANGE EVENT FIRED!');
-                console.log('   - Event:', e);
-                console.log('   - Event type:', e.type);
-                console.log('   - Target:', e.target);
-                console.log('   - Files array:', e.target.files);
-                console.log('   - Files length:', e.target.files ? e.target.files.length : 'N/A');
-
                 const file = e.target.files[0];
-                console.log('   - Selected file:', file);
-
-                if (file) {
-                    console.log('   - File name:', file.name);
-                    console.log('   - File type:', file.type);
-                    console.log('   - File size:', file.size, 'bytes');
-                    handleFile(file);
-                } else {
-                    console.log('⚠️ No file in selection (user may have cancelled)');
-                }
-                console.log('='.repeat(50));
+                if (file) handleFile(file);
             });
-            console.log('   - ✅ change listener added to fileInput');
 
             // Also listen for click on fileInput to verify it's being triggered
             fileInput.addEventListener('click', (e) => {
-                console.log('🖱️ FILE INPUT CLICK EVENT - File picker should open now');
                 // Reset value to allow selecting the same file again
                 // (change event doesn't fire if same file is selected)
                 e.target.value = '';
             });
-            console.log('   - ✅ click listener added to fileInput (for same-file fix)');
 
             analyzeBtn.addEventListener('click', analyzeReceipt);
-            console.log('   - analyze button listener added');
-
             expenseForm.addEventListener('submit', saveExpense);
-            console.log('   - form submit listener added');
-
-            console.log('✅ Step 5 COMPLETE: All event listeners set up successfully');
-
         } catch (listenerError) {
-            console.error('❌ Step 5 FAILED: Error setting up event listeners:', listenerError);
+            console.error('Error setting up event listeners:', listenerError);
         }
 
         // Initialize - load expenses from Supabase
-        console.log('📍 Step 6: Loading expenses from Supabase...');
         loadExpenses();
 
         function handleFile(file) {
-            console.log('='.repeat(50));
-            console.log('📷 handleFile() CALLED');
-            console.log('   - File object:', file);
-            console.log('   - File name:', file?.name);
-            console.log('   - File type:', file?.type);
-            console.log('   - File size:', file?.size, 'bytes');
-            console.log('='.repeat(50));
 
             if (!file) {
                 console.error('❌ handleFile: No file provided!');
@@ -1954,62 +1872,31 @@
             }
 
             if (!file.type.match(/^image\/(jpeg|png)$/)) {
-                console.log('❌ handleFile: Invalid file type:', file.type);
-                console.log('   - Expected: image/jpeg or image/png');
                 showError('Please upload a JPG or PNG image.');
                 return;
             }
 
-            console.log('✅ handleFile: File type is valid, creating FileReader...');
             const reader = new FileReader();
 
-            reader.onloadstart = () => {
-                console.log('📖 FileReader: onloadstart - Reading file...');
-            };
-
-            reader.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const percent = Math.round((e.loaded / e.total) * 100);
-                    console.log('📖 FileReader: onprogress -', percent + '%');
-                }
-            };
-
             reader.onload = (e) => {
-                console.log('✅ FileReader: onload - File read successfully!');
-                console.log('   - Result length:', e.target.result?.length || 0, 'characters');
-                console.log('   - Result preview:', e.target.result?.substring(0, 50) + '...');
-
                 currentImageData = e.target.result;
                 currentMediaType = file.type;
 
-                console.log('   - Setting preview image src...');
                 previewImage.src = currentImageData;
 
-                console.log('   - Updating UI classes...');
                 previewImage.classList.remove('hidden');
                 uploadPlaceholder.classList.add('hidden');
                 uploadArea.classList.add('has-image');
                 analyzeBtn.classList.remove('hidden');
 
                 hideError();
-
-                console.log('✅ handleFile COMPLETE: Image preview should now be visible');
-                console.log('   - previewImage.hidden:', previewImage.classList.contains('hidden'));
-                console.log('   - analyzeBtn.hidden:', analyzeBtn.classList.contains('hidden'));
             };
 
-            reader.onerror = (e) => {
-                console.error('❌ FileReader: onerror - Failed to read file!');
-                console.error('   - Error:', reader.error);
-                console.error('   - Event:', e);
+            reader.onerror = () => {
+                console.error('FileReader failed to read file:', reader.error);
                 showError('Failed to read the file. Please try again.');
             };
 
-            reader.onabort = () => {
-                console.log('⚠️ FileReader: onabort - File reading was aborted');
-            };
-
-            console.log('📖 FileReader: Starting readAsDataURL...');
             reader.readAsDataURL(file);
         }
 
@@ -2022,14 +1909,10 @@
          * @returns {Promise<string>} - Compressed image as data URL
          */
         async function compressImage(dataUrl, maxWidth = 1200, maxHeight = 1600, initialQuality = 0.85) {
-            console.log('🗜️ Starting image compression...');
-            console.log('   - Max dimensions:', maxWidth, 'x', maxHeight);
-            console.log('   - Initial quality:', initialQuality);
 
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.onload = () => {
-                    console.log('   - Original dimensions:', img.width, 'x', img.height);
 
                     // Calculate new dimensions maintaining aspect ratio
                     let { width, height } = img;
@@ -2043,7 +1926,6 @@
                         height = maxHeight;
                     }
 
-                    console.log('   - Resized dimensions:', width, 'x', height);
 
                     // Create canvas and draw resized image
                     const canvas = document.createElement('canvas');
@@ -2068,11 +1950,8 @@
                         // Calculate approximate size (data URL is base64, ~33% larger than binary)
                         const approximateSize = Math.round((compressedDataUrl.length - 'data:image/jpeg;base64,'.length) * 0.75);
 
-                        console.log(`   - Attempt ${attempts + 1}: quality=${quality.toFixed(2)}, size≈${Math.round(approximateSize / 1024)} KB`);
 
                         if (approximateSize <= maxSizeBytes) {
-                            console.log('✅ Image compressed successfully!');
-                            console.log(`   - Final size: ~${Math.round(approximateSize / 1024)} KB`);
                             resolve(compressedDataUrl);
                             return;
                         }
@@ -2084,7 +1963,6 @@
 
                     // If still too large after quality reduction, try reducing dimensions further
                     if (attempts >= maxAttempts || quality <= 0.1) {
-                        console.log('⚠️ Quality reduction not enough, reducing dimensions...');
 
                         // Recursively try with smaller dimensions
                         const smallerMaxWidth = Math.round(maxWidth * 0.75);
@@ -2092,7 +1970,6 @@
 
                         if (smallerMaxWidth < 400) {
                             // Give up if dimensions would be too small for OCR
-                            console.log('⚠️ Cannot compress further without losing OCR quality');
                             resolve(compressedDataUrl); // Return best effort
                         } else {
                             // Try again with smaller dimensions
@@ -2133,16 +2010,13 @@
 
                 // Check if image needs compression (rough size estimate)
                 const roughSizeKB = Math.round((currentImageData.length - 'data:image/jpeg;base64,'.length) * 0.75 / 1024);
-                console.log('📏 Original image size (approx):', roughSizeKB, 'KB');
 
                 if (roughSizeKB > 900) { // Compress if over ~900 KB to have some margin
                     if (loadingText) loadingText.textContent = 'Compressing image...';
-                    console.log('🗜️ Image too large, compressing...');
 
                     try {
                         imageToSend = await compressImage(currentImageData);
                         const newSizeKB = Math.round((imageToSend.length - 'data:image/jpeg;base64,'.length) * 0.75 / 1024);
-                        console.log('✅ Compressed from', roughSizeKB, 'KB to', newSizeKB, 'KB');
                     } catch (compressError) {
                         console.error('⚠️ Compression failed, trying with original:', compressError);
                         // Continue with original image, API might still accept it
@@ -2211,7 +2085,6 @@
 
                 if (error) throw error;
 
-                console.log('✅ Expense saved to Supabase');
 
                 // Step 2: Send email notification (don't fail if email fails)
                 let emailSent = false;
@@ -2219,7 +2092,6 @@
 
                 if (currentImageData) {
                     try {
-                        console.log('📧 Sending email notification...');
                         const emailResponse = await fetch('/api/send-email', {
                             method: 'POST',
                             headers: {
@@ -2236,17 +2108,12 @@
 
                         if (emailResponse.ok && emailResult.success) {
                             emailSent = true;
-                            console.log('✅ Email notification sent successfully');
                         } else {
                             emailError = emailResult.error || 'Unknown email error';
-                            console.warn('⚠️ Email notification failed:', emailError);
                         }
                     } catch (emailErr) {
                         emailError = emailErr.message;
-                        console.warn('⚠️ Email notification error:', emailErr);
                     }
-                } else {
-                    console.log('ℹ️ No image data available for email attachment');
                 }
 
                 // Reload expenses from database
@@ -2257,7 +2124,6 @@
                     showSuccessToast('Expense saved & email sent!');
                 } else if (emailError) {
                     showSuccessToast('Expense saved (email failed)');
-                    console.warn('Email error details:', emailError);
                 } else {
                     showSuccessToast('Expense saved successfully!');
                 }
@@ -2307,27 +2173,19 @@
         }
 
         async function loadExpenses() {
-            console.log('🔧 Debug: loadExpenses called...');
             try {
-                console.log('🔧 Debug: Querying Supabase receipts table...');
                 const { data, error } = await supabaseClient
                     .from('receipts')
                     .select('*')
                     .order('date', { ascending: false });
 
-                if (error) {
-                    console.error('❌ Debug: Supabase error:', error);
-                    throw error;
-                }
-
-                console.log('✅ Debug: Supabase query successful, rows:', data?.length || 0);
-                console.log('🔧 Debug: Data:', data);
+                if (error) throw error;
 
                 expenses = data || [];
                 isLoading = false;
                 renderExpenseHistory();
             } catch (error) {
-                console.error('❌ Debug: loadExpenses error:', error);
+                console.error('Failed to load expenses:', error);
                 isLoading = false;
                 expenses = [];
                 renderExpenseHistory();
@@ -2526,7 +2384,6 @@
         }
 
         // ==================== CAMERA FUNCTIONALITY ====================
-        console.log('📍 Step 7: Setting up camera functionality...');
 
         // Camera DOM elements
         const cameraBtn = document.getElementById('cameraBtn');
@@ -2552,12 +2409,10 @@
 
         // Check for camera support
         const hasCameraSupport = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-        console.log('   - Camera API supported:', hasCameraSupport);
 
         // Hide camera button if not supported
         if (!hasCameraSupport) {
             cameraBtn.style.display = 'none';
-            console.log('   - Camera button hidden (no support)');
         }
 
         // Check for multiple cameras
@@ -2566,17 +2421,14 @@
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoDevices = devices.filter(device => device.kind === 'videoinput');
                 hasMultipleCameras = videoDevices.length > 1;
-                console.log('   - Video devices found:', videoDevices.length);
                 return hasMultipleCameras;
             } catch (e) {
-                console.log('   - Could not enumerate devices:', e);
                 return false;
             }
         }
 
         // Open camera
         async function openCamera() {
-            console.log('📷 Opening camera...');
 
             // Show modal
             cameraModal.classList.add('active');
@@ -2611,7 +2463,6 @@
                     audio: false
                 };
 
-                console.log('   - Requesting camera with constraints:', constraints);
                 cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
 
                 // Set video source
@@ -2619,7 +2470,6 @@
 
                 // Wait for video to be ready
                 cameraVideo.onloadedmetadata = () => {
-                    console.log('   - Video ready:', cameraVideo.videoWidth, 'x', cameraVideo.videoHeight);
                     cameraLoading.classList.add('hidden');
                     captureBtn.disabled = false;
 
@@ -2631,7 +2481,6 @@
                     }
                 };
 
-                console.log('✅ Camera started successfully');
 
             } catch (error) {
                 console.error('❌ Camera error:', error);
@@ -2657,13 +2506,11 @@
 
         // Close camera
         function closeCamera() {
-            console.log('📷 Closing camera...');
 
             // Stop all tracks
             if (cameraStream) {
                 cameraStream.getTracks().forEach(track => {
                     track.stop();
-                    console.log('   - Stopped track:', track.kind);
                 });
                 cameraStream = null;
             }
@@ -2681,7 +2528,6 @@
 
         // Switch camera (front/back)
         async function switchCamera() {
-            console.log('📷 Switching camera...');
 
             // Stop current stream
             if (cameraStream) {
@@ -2690,7 +2536,6 @@
 
             // Toggle facing mode
             currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
-            console.log('   - New facing mode:', currentFacingMode);
 
             // Show loading
             cameraLoading.classList.remove('hidden');
@@ -2721,7 +2566,6 @@
                     }
                 };
 
-                console.log('✅ Camera switched successfully');
 
             } catch (error) {
                 console.error('❌ Camera switch error:', error);
@@ -2733,7 +2577,6 @@
 
         // Capture photo
         function capturePhoto() {
-            console.log('📷 Capturing photo...');
 
             if (!cameraVideo.videoWidth || !cameraVideo.videoHeight) {
                 console.error('❌ Video not ready');
@@ -2753,7 +2596,6 @@
 
             // Convert to data URL
             capturedImageData = canvas.toDataURL('image/jpeg', 0.92);
-            console.log('   - Captured image size:', Math.round(capturedImageData.length / 1024), 'KB');
 
             // Show preview (mirror if using front camera to match video preview)
             capturedImage.src = capturedImageData;
@@ -2770,12 +2612,10 @@
             cameraControls.classList.add('hidden');
             previewControls.classList.remove('hidden');
 
-            console.log('✅ Photo captured successfully');
         }
 
         // Retake photo
         function retakePhoto() {
-            console.log('📷 Retaking photo...');
 
             // Clear captured image
             capturedImageData = null;
@@ -2795,7 +2635,6 @@
 
         // Use captured photo
         function usePhoto() {
-            console.log('📷 Using captured photo...');
 
             if (!capturedImageData) {
                 console.error('❌ No captured image data');
@@ -2818,7 +2657,6 @@
 
             hideError();
 
-            console.log('✅ Photo ready for analysis');
         }
 
         // Camera event listeners
@@ -2828,7 +2666,6 @@
                 e.stopPropagation();
                 openCamera();
             });
-            console.log('   - Camera button listener added');
 
             cameraCloseBtn.addEventListener('click', closeCamera);
             captureBtn.addEventListener('click', capturePhoto);
@@ -2843,120 +2680,9 @@
                 }
             });
 
-            console.log('✅ Camera event listeners set up');
         }
 
         // ==================== END CAMERA FUNCTIONALITY ====================
-
-        // Debug utilities - can be called from browser console
-        window.debugSpendTrackr = {
-            // Check the current state of all elements
-            checkState: function () {
-                console.log('='.repeat(50));
-                console.log('🔍 SpendTrackr Debug State Check');
-                console.log('='.repeat(50));
-                console.log('DOM Elements:');
-                console.log('   - uploadArea:', !!uploadArea, uploadArea);
-                console.log('   - fileInput:', !!fileInput, fileInput);
-                console.log('   - previewImage:', !!previewImage, previewImage);
-                console.log('   - analyzeBtn:', !!analyzeBtn, analyzeBtn);
-                console.log('');
-                console.log('State Variables:');
-                console.log('   - currentImageData:', currentImageData ? 'SET (' + currentImageData.length + ' chars)' : 'NULL');
-                console.log('   - currentMediaType:', currentMediaType);
-                console.log('   - expenses:', expenses.length, 'items');
-                console.log('   - isLoading:', isLoading);
-                console.log('');
-                console.log('Supabase:');
-                console.log('   - supabaseClient:', !!supabaseClient);
-                console.log('='.repeat(50));
-            },
-
-            // Manually trigger file input click
-            triggerFileInput: function () {
-                console.log('🖱️ Manually triggering fileInput.click()...');
-                fileInput.click();
-            },
-
-            // Test with a fake file (for debugging)
-            testWithFakeImage: function () {
-                console.log('🧪 Testing with a 1x1 red PNG...');
-                // Create a minimal valid PNG (1x1 red pixel)
-                const canvas = document.createElement('canvas');
-                canvas.width = 1;
-                canvas.height = 1;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = 'red';
-                ctx.fillRect(0, 0, 1, 1);
-
-                canvas.toBlob(function (blob) {
-                    const file = new File([blob], 'test.png', { type: 'image/png' });
-                    console.log('   - Created test file:', file);
-                    handleFile(file);
-                }, 'image/png');
-            },
-
-            // Check if event listeners are attached
-            checkListeners: function () {
-                console.log('🔍 Checking event listeners...');
-                console.log('   Note: Cannot directly inspect listeners, but we can verify elements exist');
-                console.log('   - fileInput exists:', !!fileInput);
-                console.log('   - fileInput is HTMLInputElement:', fileInput instanceof HTMLInputElement);
-                console.log('   - fileInput type:', fileInput?.type);
-
-                // Try to get event listeners (Chrome DevTools feature)
-                if (typeof getEventListeners === 'function') {
-                    console.log('   - fileInput listeners:', getEventListeners(fileInput));
-                } else {
-                    console.log('   - (Use Chrome DevTools: getEventListeners(document.getElementById("fileInput")))');
-                }
-            },
-
-            // Test camera
-            testCamera: function () {
-                console.log('📷 Testing camera...');
-                console.log('   - Camera API supported:', hasCameraSupport);
-                console.log('   - cameraModal:', !!cameraModal);
-                console.log('   - cameraVideo:', !!cameraVideo);
-                console.log('   - Current stream:', !!cameraStream);
-                console.log('   - Has multiple cameras:', hasMultipleCameras);
-                console.log('   - Current facing mode:', currentFacingMode);
-                if (hasCameraSupport) {
-                    console.log('   - Opening camera...');
-                    openCamera();
-                }
-            },
-
-            // Logout (for testing)
-            logout: function () {
-                logout();
-                console.log('🔒 Logged out - refresh page to see PIN screen');
-            },
-
-            // Check auth status
-            checkAuth: function () {
-                console.log('🔐 Auth status:');
-                console.log('   - localStorage token:', localStorage.getItem(AUTH_STORAGE_KEY) ? 'SET' : 'NOT SET');
-                console.log('   - sessionStorage token:', sessionStorage.getItem(AUTH_STORAGE_KEY) ? 'SET' : 'NOT SET');
-                console.log('   - isAuthenticated:', isAuthenticated());
-            }
-        };
-
-        // Final initialization check
-        console.log('='.repeat(50));
-        console.log('✅ SpendTrackr initialization complete!');
-        console.log('   - Authenticated:', isAuthenticated() ? 'YES' : 'NO');
-        console.log('   - Camera support:', hasCameraSupport ? 'YES' : 'NO');
-        console.log('');
-        console.log('🔧 Debug commands available in console:');
-        console.log('   debugSpendTrackr.checkState()       - Check current state');
-        console.log('   debugSpendTrackr.triggerFileInput() - Manually trigger file picker');
-        console.log('   debugSpendTrackr.testWithFakeImage()- Test with a fake image');
-        console.log('   debugSpendTrackr.checkListeners()   - Check event listeners');
-        console.log('   debugSpendTrackr.testCamera()       - Test camera');
-        console.log('   debugSpendTrackr.checkAuth()        - Check auth status');
-        console.log('   debugSpendTrackr.logout()           - Log out');
-        console.log('='.repeat(50));
     </script>
 </body>
 
