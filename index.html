@@ -636,6 +636,28 @@
             height: 18px;
         }
 
+        .receipt-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .receipt-link:hover {
+            color: var(--primary);
+            background: var(--primary-subtle);
+        }
+
+        .receipt-link svg {
+            width: 18px;
+            height: 18px;
+        }
+
         /* PIN Authentication Screen */
         .pin-screen {
             position: fixed;
@@ -1533,7 +1555,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
       import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-      import { getStorage } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
+      import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
       import { getAuth } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
       const firebaseConfig = {
@@ -1555,6 +1577,9 @@
       window.db = db;
       window.storage = storage;
       window.auth = auth;
+      window.ref = ref;
+      window.uploadBytes = uploadBytes;
+      window.getDownloadURL = getDownloadURL;
       window.collection = collection;
       window.addDoc = addDoc;
       window.getDocs = getDocs;
@@ -2097,10 +2122,24 @@
             const expense = Object.fromEntries(Object.entries(expenseRaw).filter(([_, v]) => v !== undefined && !Number.isNaN(v)));
 
             try {
-                // Step 1: Save to Firestore
+                // Step 1: Upload image to Firebase Storage (non-blocking on failure)
+                let imageUploadFailed = false;
+                if (currentImageData) {
+                    try {
+                        const blob = await fetch(currentImageData).then(r => r.blob());
+                        const storageRef = ref(window.storage, `receipts/${Date.now()}-receipt.jpg`);
+                        await uploadBytes(storageRef, blob);
+                        expense.imageUrl = await getDownloadURL(storageRef);
+                    } catch (uploadErr) {
+                        console.error('Image upload failed:', uploadErr);
+                        imageUploadFailed = true;
+                    }
+                }
+
+                // Step 2: Save to Firestore
                 await addDoc(collection(window.db, 'receipts'), expense);
 
-                // Step 2: Send email notification (don't fail if email fails)
+                // Step 3: Send email notification (don't fail if email fails)
                 let emailSent = false;
                 let emailError = null;
 
@@ -2134,12 +2173,13 @@
                 await loadExpenses();
 
                 // Show appropriate success message
+                const photoNote = imageUploadFailed ? ' (photo not stored)' : '';
                 if (emailSent) {
-                    showSuccessToast('Expense saved & email sent!');
+                    showSuccessToast('Expense saved & email sent!' + photoNote);
                 } else if (emailError) {
-                    showSuccessToast('Expense saved (email failed)');
+                    showSuccessToast('Expense saved (email failed)' + photoNote);
                 } else {
-                    showSuccessToast('Expense saved successfully!');
+                    showSuccessToast(imageUploadFailed ? 'Expense saved (photo not stored)' : 'Expense saved successfully!');
                 }
 
                 // Reset form after brief delay
@@ -2267,7 +2307,12 @@
                     <td class="vendor-cell">${escapeHtml(exp.vendor)}</td>
                     <td><span class="category-badge" data-category="${escapeHtml(exp.category)}">${capitalizeCategory(exp.category)}</span></td>
                     <td class="amount" style="text-align: right;">$${parseFloat(exp.amount).toFixed(2)}</td>
-                    <td>
+                    <td style="white-space:nowrap;">
+                        ${exp.imageUrl ? `<a class="receipt-link" href="${exp.imageUrl}" target="_blank" rel="noopener" title="View receipt">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </a>` : ''}
                         <button class="delete-btn" onclick="deleteExpense('${exp.id}')" title="Delete">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
