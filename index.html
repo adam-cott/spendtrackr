@@ -1529,8 +1529,41 @@
     <!-- SheetJS for Excel export -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
-    <!-- Supabase client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
+      import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+      import { getStorage } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
+      import { getAuth } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAIkCJW1spx2uwCGOrwjFGKoIuvsZMwwKU",
+        authDomain: "spendtrackr-865c4.firebaseapp.com",
+        projectId: "spendtrackr-865c4",
+        storageBucket: "spendtrackr-865c4.firebasestorage.app",
+        messagingSenderId: "169880979288",
+        appId: "1:169880979288:web:55c44fc8ed8e3e5054872d",
+        measurementId: "G-PQ6WXYGLXR"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+      const db = getFirestore(app);
+      const storage = getStorage(app);
+      const auth = getAuth(app);
+
+      window.db = db;
+      window.storage = storage;
+      window.auth = auth;
+      window.collection = collection;
+      window.addDoc = addDoc;
+      window.getDocs = getDocs;
+      window.query = query;
+      window.orderBy = orderBy;
+      window.deleteDoc = deleteDoc;
+      window.doc = doc;
+      window.dispatchEvent(new CustomEvent('firebase-ready'));
+    </script>
 
     <script>
         // ==================== PIN AUTHENTICATION ====================
@@ -1768,10 +1801,6 @@
 
         // ==================== END PIN AUTHENTICATION ====================
 
-        // Supabase configuration
-        const SUPABASE_URL = 'https://gqdagvmiyeyboqzolfsc.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxZGFndm1peWV5Ym9xem9sZnNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NTA4NzQsImV4cCI6MjA4NTEyNjg3NH0.9WjZCAjn4B_VhniQUppyxQDX57_NerKHyt4hwYiqmpg';
-
         // Global error handler to catch any uncaught errors
         window.onerror = function (message, source, lineno, colno, error) {
             console.error('Uncaught error:', message, `(${source}:${lineno}:${colno})`, error);
@@ -1782,16 +1811,6 @@
             console.error('Unhandled promise rejection:', event.reason);
         });
 
-        // Initialize Supabase client (named supabaseClient to avoid conflict with window.supabase)
-        let supabaseClient;
-        try {
-            if (!window.supabase) {
-                throw new Error('Supabase library not loaded from CDN');
-            }
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } catch (e) {
-            console.error('Supabase client creation failed, app may not work properly:', e);
-        }
 
         // State
         let currentImageData = null;
@@ -1861,8 +1880,8 @@
             console.error('Error setting up event listeners:', listenerError);
         }
 
-        // Initialize - load expenses from Supabase
-        loadExpenses();
+        // Initialize - load expenses once Firebase is ready
+        window.addEventListener('firebase-ready', () => loadExpenses());
 
         function handleFile(file) {
 
@@ -2067,24 +2086,19 @@
         async function saveExpense(e) {
             e.preventDefault();
 
-            const expense = {
+            const expenseRaw = {
                 date: document.getElementById('date').value,
                 vendor: document.getElementById('vendor').value,
                 amount: parseFloat(document.getElementById('amount').value),
                 category: document.getElementById('category').value,
-                description: document.getElementById('description').value,
-                payment_source: document.getElementById('paymentSource').value,
+                description: document.getElementById('description').value || '',
+                payment_source: document.getElementById('paymentSource').value || '',
             };
+            const expense = Object.fromEntries(Object.entries(expenseRaw).filter(([_, v]) => v !== undefined && !Number.isNaN(v)));
 
             try {
-                // Step 1: Save to Supabase
-                const { data, error } = await supabaseClient
-                    .from('receipts')
-                    .insert([expense])
-                    .select();
-
-                if (error) throw error;
-
+                // Step 1: Save to Firestore
+                await addDoc(collection(window.db, 'receipts'), expense);
 
                 // Step 2: Send email notification (don't fail if email fails)
                 let emailSent = false;
@@ -2134,7 +2148,7 @@
                 }, 1500);
             } catch (error) {
                 console.error('Error saving expense:', error);
-                showError('Failed to save expense. Please try again.');
+                showError('Failed to save expense: ' + (error.message || error));
             }
         }
 
@@ -2174,14 +2188,9 @@
 
         async function loadExpenses() {
             try {
-                const { data, error } = await supabaseClient
-                    .from('receipts')
-                    .select('*')
-                    .order('date', { ascending: false });
-
-                if (error) throw error;
-
-                expenses = data || [];
+                const q = query(collection(window.db, 'receipts'), orderBy('date', 'desc'));
+                const snapshot = await getDocs(q);
+                expenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 isLoading = false;
                 renderExpenseHistory();
             } catch (error) {
@@ -2196,13 +2205,7 @@
         async function deleteExpense(id) {
             if (confirm('Delete this expense?')) {
                 try {
-                    const { error } = await supabaseClient
-                        .from('receipts')
-                        .delete()
-                        .eq('id', id);
-
-                    if (error) throw error;
-
+                    await deleteDoc(doc(window.db, 'receipts', id));
                     await loadExpenses();
                 } catch (error) {
                     console.error('Error deleting expense:', error);
@@ -2214,13 +2217,8 @@
         async function clearAllExpenses() {
             if (confirm('Delete all expenses? This cannot be undone.')) {
                 try {
-                    const { error } = await supabaseClient
-                        .from('receipts')
-                        .delete()
-                        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
-
-                    if (error) throw error;
-
+                    const snapshot = await getDocs(collection(window.db, 'receipts'));
+                    await Promise.all(snapshot.docs.map(d => deleteDoc(doc(window.db, 'receipts', d.id))));
                     await loadExpenses();
                 } catch (error) {
                     console.error('Error clearing expenses:', error);
