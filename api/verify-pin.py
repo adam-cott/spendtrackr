@@ -8,6 +8,15 @@ import json
 import time
 from http.server import BaseHTTPRequestHandler
 
+import firebase_admin
+from firebase_admin import auth, credentials
+
+# Initialize Firebase Admin SDK once per cold start
+if not firebase_admin._apps:
+    service_account_key = json.loads(os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY', '{}'))
+    cred = credentials.Certificate(service_account_key)
+    firebase_admin.initialize_app(cred)
+
 # Simple in-memory rate limiting (resets on cold start, but that's fine for basic protection)
 # In production, you'd use Redis or similar
 attempt_tracker = {}
@@ -122,10 +131,7 @@ class handler(BaseHTTPRequestHandler):
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
 
-                # Generate a simple auth token (timestamp-based, not cryptographically secure but fine for this use case)
-                import hashlib
-                token_base = f"{correct_pin}-{int(time.time())}-spendtrackr"
-                auth_token = hashlib.sha256(token_base.encode()).hexdigest()[:32]
+                auth_token = auth.create_custom_token('adam').decode('utf-8')
 
                 response = {
                     'success': True,
