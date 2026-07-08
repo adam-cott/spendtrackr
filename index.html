@@ -1556,7 +1556,7 @@
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
       import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
       import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
-      import { getAuth, signInWithCustomToken, setPersistence, browserLocalPersistence, browserSessionPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+      import { getAuth, signInWithCustomToken, setPersistence, browserLocalPersistence, browserSessionPersistence, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyAIkCJW1spx2uwCGOrwjFGKoIuvsZMwwKU",
@@ -1582,6 +1582,7 @@
       window.browserLocalPersistence = browserLocalPersistence;
       window.browserSessionPersistence = browserSessionPersistence;
       window.onAuthStateChanged = onAuthStateChanged;
+      window.signOut = signOut;
       window.ref = ref;
       window.uploadBytes = uploadBytes;
       window.getDownloadURL = getDownloadURL;
@@ -1836,8 +1837,12 @@
         function logout() {
             localStorage.removeItem(AUTH_STORAGE_KEY);
             sessionStorage.removeItem(AUTH_STORAGE_KEY);
-            pinScreen.classList.remove('hidden');
-            pinInputs[0].focus();
+            signOut(window.auth).then(() => {
+                expenses = [];
+                renderExpenseHistory();
+                pinScreen.classList.remove('hidden');
+                pinInputs[0].focus();
+            });
         }
 
         // ==================== END PIN AUTHENTICATION ====================
