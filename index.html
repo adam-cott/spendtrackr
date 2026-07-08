@@ -1556,7 +1556,7 @@
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
       import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
       import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
-      import { getAuth } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+      import { getAuth, signInWithCustomToken, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyAIkCJW1spx2uwCGOrwjFGKoIuvsZMwwKU",
@@ -1577,6 +1577,10 @@
       window.db = db;
       window.storage = storage;
       window.auth = auth;
+      window.signInWithCustomToken = signInWithCustomToken;
+      window.setPersistence = setPersistence;
+      window.browserLocalPersistence = browserLocalPersistence;
+      window.browserSessionPersistence = browserSessionPersistence;
       window.ref = ref;
       window.uploadBytes = uploadBytes;
       window.getDownloadURL = getDownloadURL;
@@ -1745,15 +1749,26 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Store auth token
-                    const storage = rememberMe.checked ? localStorage : sessionStorage;
-                    storage.setItem(AUTH_STORAGE_KEY, result.token);
+                    try {
+                        console.log('[Auth] window.auth type:', typeof window.auth, window.auth);
+                        console.log('[Auth] token preview:', result.token ? result.token.slice(0, 20) : 'MISSING');
+                        await setPersistence(window.auth, rememberMe.checked ? browserLocalPersistence : browserSessionPersistence);
+                        console.log('[Auth] setPersistence complete, calling signInWithCustomToken...');
+                        const userCredential = await signInWithCustomToken(window.auth, result.token);
+                        console.log('[Auth] sign-in success, uid:', userCredential.user.uid);
 
-                    // Hide PIN screen
-                    pinScreen.classList.add('hidden');
+                        // Keep existing token storage so isAuthenticated() still works
+                        const storage = rememberMe.checked ? localStorage : sessionStorage;
+                        storage.setItem(AUTH_STORAGE_KEY, result.token);
 
-                    // Clear inputs
-                    pinInputs.forEach(input => input.value = '');
+                        // Hide PIN screen only after Firebase sign-in succeeds
+                        pinScreen.classList.add('hidden');
+                        pinInputs.forEach(input => input.value = '');
+                    } catch (signInError) {
+                        console.error('[Auth] sign-in failed:', signInError);
+                        pinError.textContent = 'Sign-in failed. Please try again.';
+                        pinError.classList.add('show');
+                    }
                 } else {
                     // Show error
                     pinError.textContent = result.error || 'Incorrect PIN';
