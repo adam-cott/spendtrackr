@@ -103,10 +103,11 @@ class handler(BaseHTTPRequestHandler):
             # Get submitted PIN
             submitted_pin = data.get('pin', '')
 
-            # Get correct PIN from environment
+            # Get correct PINs from environment
             correct_pin = os.environ.get('APP_PIN', '')
+            demo_pin = os.environ.get('DEMO_PIN', '')
 
-            if not correct_pin:
+            if not correct_pin and not demo_pin:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', '*')
@@ -120,7 +121,9 @@ class handler(BaseHTTPRequestHandler):
 
             # Verify PIN (constant-time comparison to prevent timing attacks)
             import hmac
-            is_valid = hmac.compare_digest(str(submitted_pin), str(correct_pin))
+            is_valid_real = bool(correct_pin) and hmac.compare_digest(str(submitted_pin), str(correct_pin))
+            is_valid_demo = bool(demo_pin) and hmac.compare_digest(str(submitted_pin), str(demo_pin))
+            is_valid = is_valid_real or is_valid_demo
 
             # Record the attempt
             record_attempt(client_ip, is_valid)
@@ -131,11 +134,15 @@ class handler(BaseHTTPRequestHandler):
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
 
-                auth_token = auth.create_custom_token('adam').decode('utf-8')
+                if is_valid_demo:
+                    auth_token = auth.create_custom_token('demo', {'demo': True}).decode('utf-8')
+                else:
+                    auth_token = auth.create_custom_token('adam').decode('utf-8')
 
                 response = {
                     'success': True,
-                    'token': auth_token
+                    'token': auth_token,
+                    'isDemo': is_valid_demo
                 }
                 self.wfile.write(json.dumps(response).encode())
             else:

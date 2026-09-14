@@ -1599,6 +1599,11 @@
     <script>
         // ==================== PIN AUTHENTICATION ====================
         const AUTH_STORAGE_KEY = 'spendtrackr_auth';
+        let isDemoAccount = false;
+
+        function receiptsCollection() {
+            return collection(window.db, isDemoAccount ? 'demo_receipts' : 'receipts');
+        }
 
         // Check if already authenticated
         function isAuthenticated() {
@@ -1928,7 +1933,13 @@
 
         // Initialize - load expenses only once there is an authenticated Firebase session
         window.addEventListener('firebase-ready', () => {
-            onAuthStateChanged(window.auth, user => { if (user) loadExpenses(); });
+            onAuthStateChanged(window.auth, async user => {
+                if (user) {
+                    const tokenResult = await user.getIdTokenResult();
+                    isDemoAccount = tokenResult.claims.demo === true;
+                    loadExpenses();
+                }
+            });
         });
 
         function handleFile(file) {
@@ -2150,7 +2161,8 @@
                 if (currentImageData) {
                     try {
                         const blob = await fetch(currentImageData).then(r => r.blob());
-                        const storageRef = ref(window.storage, `receipts/${Date.now()}-receipt.jpg`);
+                        const storagePrefix = isDemoAccount ? 'demo_receipts' : 'receipts';
+                        const storageRef = ref(window.storage, `${storagePrefix}/${Date.now()}-receipt.jpg`);
                         await uploadBytes(storageRef, blob);
                         expense.imageUrl = await getDownloadURL(storageRef);
                     } catch (uploadErr) {
@@ -2160,13 +2172,13 @@
                 }
 
                 // Step 2: Save to Firestore
-                await addDoc(collection(window.db, 'receipts'), expense);
+                await addDoc(receiptsCollection(), expense);
 
-                // Step 3: Send email notification (don't fail if email fails)
+                // Step 3: Send email notification (don't fail if email fails; skipped entirely for demo)
                 let emailSent = false;
                 let emailError = null;
 
-                if (currentImageData) {
+                if (currentImageData && !isDemoAccount) {
                     try {
                         const emailResponse = await fetch('/api/send-email', {
                             method: 'POST',
@@ -2199,6 +2211,8 @@
                 const photoNote = imageUploadFailed ? ' (photo not stored)' : '';
                 if (emailSent) {
                     showSuccessToast('Expense saved & email sent!' + photoNote);
+                } else if (isDemoAccount) {
+                    showSuccessToast('Expense saved (email could not be sent — demo account)' + photoNote);
                 } else if (emailError) {
                     showSuccessToast('Expense saved (email failed)' + photoNote);
                 } else {
@@ -2251,7 +2265,7 @@
 
         async function loadExpenses() {
             try {
-                const q = query(collection(window.db, 'receipts'), orderBy('date', 'desc'));
+                const q = query(receiptsCollection(), orderBy('date', 'desc'));
                 const snapshot = await getDocs(q);
                 expenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 isLoading = false;
@@ -2268,7 +2282,7 @@
         async function deleteExpense(id) {
             if (confirm('Delete this expense?')) {
                 try {
-                    await deleteDoc(doc(window.db, 'receipts', id));
+                    await deleteDoc(doc(receiptsCollection(), id));
                     await loadExpenses();
                 } catch (error) {
                     console.error('Error deleting expense:', error);
@@ -2280,8 +2294,8 @@
         async function clearAllExpenses() {
             if (confirm('Delete all expenses? This cannot be undone.')) {
                 try {
-                    const snapshot = await getDocs(collection(window.db, 'receipts'));
-                    await Promise.all(snapshot.docs.map(d => deleteDoc(doc(window.db, 'receipts', d.id))));
+                    const snapshot = await getDocs(receiptsCollection());
+                    await Promise.all(snapshot.docs.map(d => deleteDoc(doc(receiptsCollection(), d.id))));
                     await loadExpenses();
                 } catch (error) {
                     console.error('Error clearing expenses:', error);
