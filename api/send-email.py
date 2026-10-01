@@ -9,6 +9,7 @@ Required environment variables:
 """
 
 import os
+import json
 import sys
 import re
 import smtplib
@@ -22,8 +23,22 @@ from email.mime.image import MIMEImage
 from email.utils import formatdate, formataddr
 
 from flask import Flask, request, jsonify
+import firebase_admin
+from firebase_admin import auth, credentials
 
 app = Flask(__name__)
+
+# Initialize Firebase Admin SDK once per cold start (used to verify login tokens)
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(credentials.Certificate(json.loads(os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY', '{}'))))
+
+
+def verified_user():
+    """Return the caller's decoded Firebase ID token, or None if missing/invalid."""
+    try:
+        return auth.verify_id_token(request.headers.get('Authorization', '').removeprefix('Bearer '))
+    except Exception:
+        return None
 
 # Gmail SMTP settings (free)
 GMAIL_SMTP_SERVER = "smtp.gmail.com"
@@ -170,6 +185,10 @@ def send_receipt_email(
 @app.route("/api/send-email", methods=["POST"])
 def handle_send_email():
     """API endpoint to send receipt email notification."""
+    user = verified_user()
+    if not user or user.get("demo"):
+        return jsonify({"success": False, "error": "Not allowed"}), 403 if user else 401
+
     gmail_address = os.environ.get("GMAIL_ADDRESS")
     gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD")
     recipient_email = os.environ.get("RECEIPT_NOTIFICATION_EMAIL")

@@ -76,4 +76,5 @@ This is a receipt expense tracking app. The frontend is a single `index.html` fi
 - Image upload to Storage is non-blocking — if it fails, the expense still saves to Firestore without an `imageUrl`, and the toast notes the photo wasn't stored
 - Firestore and Storage security rules require `request.auth != null`, so all reads/writes require a valid Firebase Auth session
 - Firebase Admin SDK initialized once per cold start using `if not firebase_admin._apps` guard
+- `/api/analyze` and `/api/send-email` require an `Authorization: Bearer <Firebase ID token>` header (checked by `verified_user()`); `/api/send-email` also rejects demo tokens
 - Header "Log out" button calls `logout()` → `signOut(window.auth)`; `onAuthStateChanged` then clears the list and shows the PIN screen

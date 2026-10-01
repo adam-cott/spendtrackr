@@ -5,12 +5,27 @@ No installation required - just a free API key from ocr.space
 
 import os
 import re
+import json
 import requests
 from datetime import datetime
 
 from flask import Flask, request, jsonify
+import firebase_admin
+from firebase_admin import auth, credentials
 
 app = Flask(__name__)
+
+# Initialize Firebase Admin SDK once per cold start (used to verify login tokens)
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(credentials.Certificate(json.loads(os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY', '{}'))))
+
+
+def verified_user():
+    """Return the caller's decoded Firebase ID token, or None if missing/invalid."""
+    try:
+        return auth.verify_id_token(request.headers.get('Authorization', '').removeprefix('Bearer '))
+    except Exception:
+        return None
 
 # OCR.space API endpoint
 OCR_SPACE_URL = "https://api.ocr.space/parse/image"
@@ -577,6 +592,9 @@ def ocr_space_api(image_base64: str, api_key: str) -> str:
 @app.route("/api/analyze", methods=["POST"])
 def analyze_receipt():
     """Analyze a receipt image and return extracted data."""
+    if not verified_user():
+        return jsonify({"error": "Not signed in"}), 401
+
     try:
         # Get API key from environment
         api_key = os.environ.get("OCR_SPACE_API_KEY")
