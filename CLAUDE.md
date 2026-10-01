@@ -49,7 +49,8 @@ This is a receipt expense tracking app. The frontend is a single `index.html` fi
 - Returns the custom token to the client
 
 **Frontend (`index.html`)**: Single-page vanilla JS application
-- PIN screen shown on load; calls `/api/verify-pin`, then calls `signInWithCustomToken` to establish a Firebase Auth session
+- `onAuthStateChanged` is the single source of truth for login: it shows the PIN screen when signed out and hides it (plus toggles the "Demo account" badge) when signed in
+- PIN form calls `/api/verify-pin`, then `signInWithCustomToken` to establish a Firebase Auth session
 - `onAuthStateChanged` drives data loading — Firestore queries only run once a valid auth session exists
 - Handles image upload via drag-drop, file picker, or in-browser camera
 - Compresses images client-side (canvas) before sending to OCR
@@ -75,4 +76,4 @@ This is a receipt expense tracking app. The frontend is a single `index.html` fi
 - Image upload to Storage is non-blocking — if it fails, the expense still saves to Firestore without an `imageUrl`, and the toast notes the photo wasn't stored
 - Firestore and Storage security rules require `request.auth != null`, so all reads/writes require a valid Firebase Auth session
 - Firebase Admin SDK initialized once per cold start using `if not firebase_admin._apps` guard
-- `logout()` calls `signOut(window.auth)` to end the Firebase session, then clears the expense list before showing the PIN screen
+- Header "Log out" button calls `logout()` → `signOut(window.auth)`; `onAuthStateChanged` then clears the list and shows the PIN screen

@@ -115,6 +115,40 @@
             font-weight: 400;
         }
 
+        .account-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .demo-badge {
+            background: var(--primary-light);
+            color: var(--primary-darker);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .logout-btn {
+            width: auto;
+            background: none;
+            border: 1px solid var(--secondary);
+            color: var(--secondary-dark);
+            font: inherit;
+            font-size: 0.875rem;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background: var(--secondary-light);
+        }
+
         /* Cards */
         .card {
             background: var(--bg-card);
@@ -1271,7 +1305,7 @@
 
 <body>
     <!-- PIN Authentication Screen -->
-    <div class="pin-screen" id="pinScreen">
+    <div class="pin-screen hidden" id="pinScreen">
         <div class="pin-container">
             <div class="pin-logo">SpendTrackr</div>
             <p class="pin-subtitle">Enter your 4-digit PIN to continue</p>
@@ -1311,6 +1345,10 @@
         <header class="header">
             <h1>SpendTrackr</h1>
             <p>Scan receipts and track your spending effortlessly</p>
+            <div class="account-bar">
+                <span class="demo-badge hidden" id="demoBadge">Demo account</span>
+                <button type="button" class="logout-btn" onclick="logout()">Log out</button>
+            </div>
         </header>
 
         <!-- Upload Section -->
@@ -1598,19 +1636,10 @@
 
     <script>
         // ==================== PIN AUTHENTICATION ====================
-        const AUTH_STORAGE_KEY = 'spendtrackr_auth';
         let isDemoAccount = false;
 
         function receiptsCollection() {
             return collection(window.db, isDemoAccount ? 'demo_receipts' : 'receipts');
-        }
-
-        // Check if already authenticated
-        function isAuthenticated() {
-            // Check localStorage first (persistent), then sessionStorage (temporary)
-            const localAuth = localStorage.getItem(AUTH_STORAGE_KEY);
-            const sessionAuth = sessionStorage.getItem(AUTH_STORAGE_KEY);
-            return !!(localAuth || sessionAuth);
         }
 
         // PIN Screen DOM elements
@@ -1630,16 +1659,6 @@
         const lockoutTimer = document.getElementById('lockoutTimer');
 
         let lockoutInterval = null;
-
-        // Show/hide PIN screen based on auth status
-        function checkAuthAndShowScreen() {
-            if (isAuthenticated()) {
-                pinScreen.classList.add('hidden');
-            } else {
-                pinScreen.classList.remove('hidden');
-                pinInputs[0].focus();
-            }
-        }
 
         // PIN input handling - auto-advance and auto-submit
         pinInputs.forEach((input, index) => {
@@ -1757,19 +1776,9 @@
 
                 if (result.success) {
                     try {
-                        console.log('[Auth] window.auth type:', typeof window.auth, window.auth);
-                        console.log('[Auth] token preview:', result.token ? result.token.slice(0, 20) : 'MISSING');
                         await setPersistence(window.auth, rememberMe.checked ? browserLocalPersistence : browserSessionPersistence);
-                        console.log('[Auth] setPersistence complete, calling signInWithCustomToken...');
-                        const userCredential = await signInWithCustomToken(window.auth, result.token);
-                        console.log('[Auth] sign-in success, uid:', userCredential.user.uid);
-
-                        // Keep existing token storage so isAuthenticated() still works
-                        const storage = rememberMe.checked ? localStorage : sessionStorage;
-                        storage.setItem(AUTH_STORAGE_KEY, result.token);
-
-                        // Hide PIN screen only after Firebase sign-in succeeds
-                        pinScreen.classList.add('hidden');
+                        // onAuthStateChanged hides the PIN screen once sign-in succeeds
+                        await signInWithCustomToken(window.auth, result.token);
                         pinInputs.forEach(input => input.value = '');
                     } catch (signInError) {
                         console.error('[Auth] sign-in failed:', signInError);
@@ -1810,44 +1819,10 @@
             }
         });
 
-        // Check for lockout on page load (handle 429 response)
-        async function checkLockoutStatus() {
-            try {
-                const response = await fetch('/api/verify-pin', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ pin: '0000' }), // Dummy PIN to check status
-                });
 
-                if (response.status === 429) {
-                    const result = await response.json();
-                    if (result.lockout_remaining) {
-                        startLockoutCountdown(result.lockout_remaining);
-                    }
-                }
-            } catch (e) {
-                // Ignore - just checking status
-            }
-        }
-
-        // Initialize auth check
-        checkAuthAndShowScreen();
-        if (!isAuthenticated()) {
-            checkLockoutStatus();
-        }
-
-        // Logout function (for debugging/manual logout)
+        // onAuthStateChanged shows the PIN screen once signed out
         function logout() {
-            localStorage.removeItem(AUTH_STORAGE_KEY);
-            sessionStorage.removeItem(AUTH_STORAGE_KEY);
-            signOut(window.auth).then(() => {
-                expenses = [];
-                renderExpenseHistory();
-                pinScreen.classList.remove('hidden');
-                pinInputs[0].focus();
-            });
+            signOut(window.auth);
         }
 
         // ==================== END PIN AUTHENTICATION ====================
@@ -1931,13 +1906,22 @@
             console.error('Error setting up event listeners:', listenerError);
         }
 
-        // Initialize - load expenses only once there is an authenticated Firebase session
+        // Firebase Auth is the single source of truth for which screen to show
         window.addEventListener('firebase-ready', () => {
             onAuthStateChanged(window.auth, async user => {
+                expenses = [];
+                isLoading = true;
+                renderExpenseHistory();
                 if (user) {
                     const tokenResult = await user.getIdTokenResult();
                     isDemoAccount = tokenResult.claims.demo === true;
+                    document.getElementById('demoBadge').classList.toggle('hidden', !isDemoAccount);
+                    pinScreen.classList.add('hidden');
                     loadExpenses();
+                } else {
+                    resetForm();
+                    pinScreen.classList.remove('hidden');
+                    pinInputs[0].focus();
                 }
             });
         });
