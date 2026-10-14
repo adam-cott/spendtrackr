@@ -59,6 +59,7 @@ This is a receipt expense tracking app. The frontend is a single `index.html` fi
 - Expense list renders a receipt icon per row that opens the stored image in a new tab
 - Pencil icon per row calls `editExpense(id)`, which reuses the Review Details form in edit mode (`editingId` set); saving then calls `updateDoc` instead of the add flow — photo is untouched and no email is sent. `resetForm()` exits edit mode
 - There is intentionally no "clear all" — expenses are deleted one at a time
+- Export workflow: the Excel export gets pasted into a shared OneDrive spreadsheet (the real source of truth), so column order must stay matched to it. "Export New" exports only records without `exported: true`, then sets that flag; exported records are hidden unless "Show exported" is on, and "Total to Export" sums only unexported ones. "Re-export all" downloads everything without changing flags. Editing keeps the flag. Excel RECEIPT column is Y/N based on `imageUrl`
 - Exports to Excel using SheetJS library (loaded from CDN)
 
 **Firebase (client-side SDK loaded via CDN — `firebase-app`, `firebase-firestore`, `firebase-storage`, `firebase-auth`)**:

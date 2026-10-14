@@ -637,6 +637,49 @@
             border-top: 3px solid var(--text-primary);
         }
 
+        .exported-row td {
+            opacity: 0.55;
+        }
+
+        .exported-tag {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: var(--bg-subtle);
+            color: var(--text-muted);
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .history-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 16px;
+        }
+
+        .link-btn {
+            width: auto;
+            background: none;
+            border: none;
+            padding: 4px;
+            color: var(--secondary-dark);
+            font: inherit;
+            font-size: 0.875rem;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .link-btn:hover {
+            color: var(--primary);
+            background: none;
+            transform: none;
+            box-shadow: none;
+        }
+
         .total-label {
             font-weight: 600;
             color: var(--text-secondary);
@@ -1528,7 +1571,7 @@
                     </tbody>
                     <tfoot>
                         <tr class="total-row">
-                            <td colspan="3" class="total-label">Total Spent</td>
+                            <td colspan="3" class="total-label">Total to Export</td>
                             <td id="totalAmount" class="total-amount" style="text-align: right;">$0.00</td>
                             <td></td>
                         </tr>
@@ -1541,8 +1584,12 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Export to Excel
+                    Export New to Excel
                 </button>
+            </div>
+            <div class="history-links hidden" id="historyLinks">
+                <button type="button" class="link-btn" id="toggleExportedBtn" onclick="showExported = !showExported; renderExpenseHistory()"></button>
+                <button type="button" class="link-btn" onclick="exportToExcel(true)">Re-export all</button>
             </div>
         </div>
     </div>
@@ -1857,6 +1904,7 @@
         let currentMediaType = null;
         let expenses = [];
         let isLoading = true;
+        let showExported = false;
 
         // DOM Elements
         const uploadArea = document.getElementById('uploadArea');
@@ -2369,39 +2417,45 @@
             const table = document.getElementById('expenseTable');
             const emptyState = document.getElementById('emptyState');
             const exportActions = document.getElementById('exportActions');
+            const historyLinks = document.getElementById('historyLinks');
+
+            // Exported expenses stay stored but are hidden unless "Show exported" is on
+            const pending = expenses.filter(exp => !exp.exported);
+            const exportedCount = expenses.length - pending.length;
+            const visible = showExported ? expenses : pending;
+
+            exportActions.style.display = !isLoading && pending.length > 0 ? 'flex' : 'none';
+            historyLinks.classList.toggle('hidden', isLoading || exportedCount === 0);
+            document.getElementById('toggleExportedBtn').textContent = `${showExported ? 'Hide' : 'Show'} exported (${exportedCount})`;
 
             if (isLoading) {
                 emptyState.innerHTML = '<p>Loading expenses...</p>';
                 emptyState.classList.remove('hidden');
                 table.classList.add('hidden');
-                exportActions.style.display = 'none';
                 return;
             }
 
-            if (expenses.length === 0) {
+            if (visible.length === 0) {
                 emptyState.innerHTML = `
                     <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
-                    <p>No expenses yet. Upload a receipt to get started.</p>
+                    <p>${exportedCount ? 'All caught up — everything has been exported.' : 'No expenses yet. Upload a receipt to get started.'}</p>
                 `;
                 table.classList.add('hidden');
                 emptyState.classList.remove('hidden');
-                exportActions.style.display = 'none';
                 return;
             }
 
             emptyState.classList.add('hidden');
             table.classList.remove('hidden');
-            exportActions.style.display = 'flex';
 
-            // Sort by date descending (already sorted from Supabase, but just in case)
-            const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const sorted = [...visible].sort((a, b) => new Date(b.date) - new Date(a.date));
 
             tbody.innerHTML = sorted.map(exp => `
-                <tr>
+                <tr class="${exp.exported ? 'exported-row' : ''}">
                     <td class="date-cell">${formatDate(exp.date)}</td>
-                    <td class="vendor-cell">${escapeHtml(exp.vendor)}</td>
+                    <td class="vendor-cell">${escapeHtml(exp.vendor)}${exp.exported ? '<span class="exported-tag">Exported</span>' : ''}</td>
                     <td><span class="category-badge" data-category="${escapeHtml(exp.category)}">${capitalizeCategory(exp.category)}</span></td>
                     <td class="amount" style="text-align: right;">$${parseFloat(exp.amount).toFixed(2)}</td>
                     <td style="white-space:nowrap;">
@@ -2424,7 +2478,7 @@
                 </tr>
             `).join('');
 
-            const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+            const total = pending.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
             document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
         }
 
@@ -2459,15 +2513,17 @@
             return `$${amount.toFixed(2)}`;
         }
 
-        function exportToExcel() {
-            if (expenses.length === 0) {
-                alert('No expenses to export.');
+        // Default: export only not-yet-exported expenses, then mark them. all=true re-exports everything without marking.
+        async function exportToExcel(all = false) {
+            const rows = all ? expenses : expenses.filter(exp => !exp.exported);
+            if (rows.length === 0) {
+                alert('No new expenses to export.');
                 return;
             }
 
             const eligible529Categories = ['food', 'textbooks'];
 
-            const data = expenses.map(exp => {
+            const data = rows.map(exp => {
                 const category = exp.category.toLowerCase();
                 const is529Eligible = eligible529Categories.includes(category);
 
@@ -2480,7 +2536,7 @@
                     'DESC': exp.description || '',
                     'PYMT SRC': exp.payment_source || '',
                     'TERM': getTerm(exp.date),
-                    'RECEIPT': 'Y',
+                    'RECEIPT': exp.imageUrl ? 'Y' : 'N',
                 };
             });
 
@@ -2501,7 +2557,19 @@
             ];
             ws['!cols'] = colWidths;
 
-            XLSX.writeFile(wb, 'expenses.xlsx');
+            XLSX.writeFile(wb, all ? 'expenses-all.xlsx' : `expenses-${new Date().toLocaleDateString('en-CA')}.xlsx`);
+            if (all) return;
+
+            // Mark locally right away so a quick second tap can't export the same rows again
+            rows.forEach(exp => exp.exported = true);
+            try {
+                await Promise.all(rows.map(exp => updateDoc(doc(receiptsCollection(), exp.id), { exported: true })));
+                showSuccessToast(`Exported ${rows.length} expense${rows.length === 1 ? '' : 's'}`);
+            } catch (error) {
+                console.error('Error marking expenses as exported:', error);
+                showError("The file downloaded, but some expenses couldn't be marked as exported. Check the list before your next export to avoid duplicates.");
+            }
+            await loadExpenses();
         }
 
         function showError(message) {
