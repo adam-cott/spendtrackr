@@ -1330,11 +1330,6 @@
                 font-size: 0.875rem;
             }
 
-            .expense-table th,
-            .expense-table td {
-                padding: 14px 8px 14px 0;
-            }
-
             .category-badge {
                 padding: 4px 10px;
                 font-size: 0.6875rem;
@@ -1376,6 +1371,53 @@
                 font-size: 0.9375rem;
                 min-width: 100px;
             }
+        }
+
+        @media (max-width: 720px) {
+            /* Narrow screens: each expense becomes a two-line row so it fits the card width */
+            .expense-table,
+            .expense-table tbody,
+            .expense-table tfoot {
+                display: block;
+            }
+
+            .expense-table thead {
+                display: none;
+            }
+
+            .expense-table tr {
+                display: grid;
+                grid-template-columns: auto 1fr auto;
+                grid-template-areas:
+                    "vendor vendor amount"
+                    "date category actions";
+                align-items: center;
+                gap: 6px 12px;
+                padding: 14px 0;
+                border-bottom: 1px solid var(--border-light);
+            }
+
+            .expense-table td {
+                padding: 0;
+                border: none;
+            }
+
+            .expense-table .vendor-cell { grid-area: vendor; }
+            .expense-table .amount { grid-area: amount; }
+            .expense-table .date-cell { grid-area: date; font-size: 0.8125rem; white-space: nowrap; }
+            .expense-table .category-cell { grid-area: category; }
+            .expense-table .actions-cell { grid-area: actions; }
+
+            .expense-table .total-row {
+                grid-template-areas: "label label total";
+                padding-top: 16px;
+                border-bottom: none;
+                border-top: 3px solid var(--text-primary);
+            }
+
+            .total-row .total-label { grid-area: label; }
+            .total-row .total-amount { grid-area: total; }
+            .total-row td:empty { display: none; }
         }
     </style>
 </head>
@@ -2480,9 +2522,9 @@
                 <tr class="${exp.exported ? 'exported-row' : ''}">
                     <td class="date-cell">${formatDate(exp.date)}</td>
                     <td class="vendor-cell">${escapeHtml(exp.vendor)}${exp.exported ? '<span class="exported-tag">Exported</span>' : ''}</td>
-                    <td><span class="category-badge" data-category="${escapeHtml(exp.category)}">${capitalizeCategory(exp.category)}</span></td>
+                    <td class="category-cell"><span class="category-badge" data-category="${escapeHtml(exp.category)}">${capitalizeCategory(exp.category)}</span></td>
                     <td class="amount" style="text-align: right;">$${parseFloat(exp.amount).toFixed(2)}</td>
-                    <td style="white-space:nowrap;">
+                    <td class="actions-cell" style="white-space:nowrap;">
                         ${exp.imageUrl ? `<a class="receipt-link" href="${exp.imageUrl}" target="_blank" rel="noopener" title="View receipt">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
