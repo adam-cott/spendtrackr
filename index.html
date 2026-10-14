@@ -29,32 +29,37 @@
             --primary-light: #ecfccb;
             --primary-subtle: #f7fee7;
 
-            /* Secondary (warm brown) */
-            --secondary: #78716c;
-            --secondary-dark: #57534e;
-            --secondary-light: #f5f5f4;
+            --on-primary: #ffffff;
 
-            /* Earthy Neutrals - cream/beige tones */
-            --bg-primary: #faf8f5;
-            --bg-card: #fffdf9;
-            --bg-subtle: #f5f3ef;
-            --text-primary: #292524;
-            --text-secondary: #57534e;
-            --text-muted: #a8a29e;
-            --border-light: #e7e5e4;
-            --border-medium: #d6d3d1;
+            /* Secondary (warm brown, for outlines like Log out) */
+            --secondary: #8a7656;
+            --secondary-dark: #5a4d3b;
+            --secondary-light: #efe5d1;
+
+            /* Warm cream neutrals (text colors meet WCAG AA on page, card and subtle backgrounds) */
+            --bg-primary: #f5eedf;
+            --bg-card: #fdf8ec;
+            --bg-subtle: #efe5d1;
+            --text-primary: #2b241c;
+            --text-secondary: #5a4d3b;
+            --text-muted: #73634a;
+            --border-light: #e3d6bd;
+            --border-medium: #d2c1a2;
 
             /* Status colors */
             --success: #4d7c0f;
             --success-bg: #f7fee7;
+            --success-border: #bbf7d0;
             --error: #b91c1c;
             --error-bg: #fef2f2;
+            --error-border: #fecaca;
 
-            /* Shadows */
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            /* Shadows (warm brown tint instead of black so they don't look gray on cream) */
+            --shadow-color: 74, 56, 28;
+            --shadow-sm: 0 1px 2px rgba(var(--shadow-color), 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(var(--shadow-color), 0.08), 0 2px 4px -2px rgba(var(--shadow-color), 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(var(--shadow-color), 0.1), 0 4px 6px -4px rgba(var(--shadow-color), 0.06);
+            --shadow-xl: 0 20px 25px -5px rgba(var(--shadow-color), 0.12), 0 8px 10px -6px rgba(var(--shadow-color), 0.06);
 
             /* Radius */
             --radius-sm: 8px;
@@ -185,7 +190,7 @@
             height: 36px;
             border-radius: 10px;
             background: var(--primary);
-            color: #fff;
+            color: var(--on-primary);
         }
 
         .card-icon svg {
@@ -373,7 +378,7 @@
             font-weight: 600;
             font-family: var(--font-sans);
             background: var(--primary);
-            color: white;
+            color: var(--on-primary);
             border: none;
             border-radius: var(--radius-md);
             cursor: pointer;
@@ -407,14 +412,6 @@
         .btn-secondary:hover {
             background: var(--bg-subtle);
             border-color: var(--border-medium);
-        }
-
-        .btn-brown {
-            background: #78716c;
-        }
-
-        .btn-brown:hover {
-            background: #57534e;
         }
 
         .btn-success {
@@ -463,7 +460,7 @@
             border-radius: var(--radius-md);
             margin-bottom: 24px;
             font-size: 0.9375rem;
-            border: 1px solid #fecaca;
+            border: 1px solid var(--error-border);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -476,7 +473,7 @@
             border-radius: var(--radius-md);
             margin-bottom: 24px;
             font-size: 0.9375rem;
-            border: 1px solid #bbf7d0;
+            border: 1px solid var(--success-border);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -489,7 +486,7 @@
             left: 50%;
             transform: translateX(-50%) translateY(100px);
             background: var(--primary);
-            color: white;
+            color: var(--on-primary);
             padding: 16px 28px;
             border-radius: var(--radius-lg);
             font-weight: 500;
@@ -610,8 +607,8 @@
         }
 
         .category-badge[data-category="other"] {
-            background: #f4f4f5;
-            color: #52525b;
+            background: var(--bg-subtle);
+            color: var(--text-secondary);
         }
 
         .empty-state {
@@ -637,8 +634,11 @@
             border-top: 3px solid var(--text-primary);
         }
 
-        .exported-row td {
-            opacity: 0.55;
+        /* Muted color instead of opacity so faded rows still meet contrast */
+        .exported-row td,
+        .exported-row .vendor-cell,
+        .exported-row .amount {
+            color: var(--text-muted);
         }
 
         .exported-tag {
@@ -897,7 +897,7 @@
             font-size: 1rem;
             font-weight: 600;
             background: var(--primary);
-            color: white;
+            color: var(--on-primary);
             border: none;
             border-radius: var(--radius-md);
             cursor: pointer;
@@ -1461,7 +1461,7 @@
                 </button>
             </div>
             <input type="file" id="fileInput" accept="image/jpeg,image/png">
-            <button id="analyzeBtn" class="btn-brown hidden" style="margin-top: 24px;">
+            <button id="analyzeBtn" class="hidden" style="margin-top: 24px;">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
