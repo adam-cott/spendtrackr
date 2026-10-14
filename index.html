@@ -1399,7 +1399,7 @@
                     <svg fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
-            <input type="file" id="fileInput" accept="image/jpeg,image/png" capture="environment">
+            <input type="file" id="fileInput" accept="image/jpeg,image/png">
             <button id="analyzeBtn" class="btn-brown hidden" style="margin-top: 24px;">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1947,15 +1947,26 @@
                 return;
             }
 
-            if (!file.type.match(/^image\/(jpeg|png)$/)) {
-                showError('Please upload a JPG or PNG image.');
+            // Some browsers report no type for formats like HEIC, so only reject files that are clearly not images
+            if (file.type && !file.type.startsWith('image/')) {
+                showError("That file isn't a photo. Please upload a JPG or PNG image.");
                 return;
             }
 
             const reader = new FileReader();
 
-            reader.onload = (e) => {
-                currentImageData = e.target.result;
+            reader.onload = async (e) => {
+                let imageData = e.target.result;
+                // Convert other formats (e.g. iPhone HEIC) to JPEG — works wherever the browser can display them
+                if (!/^image\/(jpeg|png)$/.test(file.type)) {
+                    try {
+                        imageData = await compressImage(imageData);
+                    } catch {
+                        showError("This photo format isn't supported. Please upload a JPG or PNG image.");
+                        return;
+                    }
+                }
+                currentImageData = imageData;
                 currentMediaType = file.type;
 
                 previewImage.src = currentImageData;
@@ -2114,10 +2125,11 @@
                     }),
                 });
 
-                const result = await response.json();
+                // A crashed or overloaded server may not reply with JSON
+                const result = await response.json().catch(() => ({}));
 
                 if (!response.ok || result.error) {
-                    throw new Error(result.error || 'Failed to analyze receipt');
+                    throw new Error(result.error || `Couldn't scan the receipt (error ${response.status}). Please try again.`);
                 }
 
                 // Populate form with extracted data (a fresh scan is always a new expense, never an edit)
@@ -2144,6 +2156,7 @@
 
         async function saveExpense(e) {
             e.preventDefault();
+            hideError();
 
             const expenseRaw = {
                 date: document.getElementById('date').value,
@@ -2494,6 +2507,7 @@
         function showError(message) {
             errorText.textContent = message;
             errorMsg.classList.remove('hidden');
+            errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function hideError() {
